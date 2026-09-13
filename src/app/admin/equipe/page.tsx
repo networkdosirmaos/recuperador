@@ -28,14 +28,14 @@ export default function EquipeDashboard() {
       const teamStats: TeamMemberStat[] = []
       
       for (const p of profiles) {
-        // Quantos esto na mo dele agora (status != novo, recuperado, perdido)
+        // Quantos estão na mão dele agora (status != novo, recuperado, perdido)
         const { count: inProgress } = await supabase
           .from('leads')
           .select('*', { count: 'exact', head: true })
           .eq('current_assignee_id', p.id)
           .not('status', 'in', '("novo","recuperado","perdido")')
 
-        // Quantos recuperados (idealmente de hoje ou da histria. Faremos histria)
+        // Quantos recuperados
         const { count: recovered } = await supabase
           .from('leads')
           .select('*', { count: 'exact', head: true })
@@ -44,9 +44,8 @@ export default function EquipeDashboard() {
           
         teamStats.push({
           id: p.id,
-          name: p.full_name || 'Usurio',
-          email: p.id, // Supabase auth.users email no  exposto diretamente no profiles a menos que tenhamos feito trigger copiando, ento mostraremos o ID se no tivermos email no profiles.
-          // Correo: O trigger na fase 1 no copiava o e-mail, mas o Admin v.
+          name: p.full_name || 'Vendedor',
+          email: p.email || 'E-mail não sincronizado',
           is_active: p.is_active === null ? true : p.is_active,
           in_progress: inProgress || 0,
           recovered: recovered || 0
