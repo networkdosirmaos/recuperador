@@ -1,4 +1,4 @@
-import { Phone, Mail, Inbox } from 'lucide-react'
+import { Phone, Mail, Inbox, Flame, ThermometerSun, AlertTriangle } from 'lucide-react'
 
 export type MyLead = {
   id: string
@@ -7,12 +7,20 @@ export type MyLead = {
   email: string | null
   status: string
   temperature?: string
+  cakto_updated_at?: string
   updated_at: string
+}
+
+interface HeatSettings {
+  super_hot_days: number
+  hot_days: number
+  warm_days: number
 }
 
 interface MyLeadsTableProps {
   leads: MyLead[]
   onStatusChange: (leadId: string, newStatus: string) => Promise<void>
+  heatSettings?: HeatSettings
 }
 
 const statusOptions = [
@@ -24,11 +32,36 @@ const statusOptions = [
   { value: 'perdido', label: '❌ Perdido (Sem interesse)' },
 ]
 
-export function MyLeadsTable({ leads, onStatusChange }: MyLeadsTableProps) {
-  // Ordenar: Fervendo primeiro
+// Helper para calcular temperatura dinamicamente
+const getDynamicHeat = (lead: MyLead, settings?: HeatSettings) => {
+  // Se não veio da Cakto, usamos o fallback (criado da planilha = frio, ou manual = quente)
+  if (!lead.cakto_updated_at) return lead.temperature || 'frio';
+  if (!settings) return 'frio';
+
+  const leadDate = new Date(lead.cakto_updated_at).getTime();
+  const now = new Date().getTime();
+  const diffDays = Math.ceil(Math.abs(now - leadDate) / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= settings.super_hot_days) return 'super_quente';
+  if (diffDays <= settings.hot_days) return 'quente';
+  if (diffDays <= settings.warm_days) return 'morno';
+  return 'frio';
+}
+
+const getHeatWeight = (heat: string) => {
+  if (heat === 'super_quente') return 4;
+  if (heat === 'quente') return 3;
+  if (heat === 'morno') return 2;
+  return 1;
+}
+
+export function MyLeadsTable({ leads, onStatusChange, heatSettings }: MyLeadsTableProps) {
+  // Ordenar: Mais quente primeiro, depois mais recente
   const sortedLeads = [...leads].sort((a, b) => {
-    if (a.temperature === 'quente' && b.temperature !== 'quente') return -1;
-    if (b.temperature === 'quente' && a.temperature !== 'quente') return 1;
+    const heatA = getHeatWeight(getDynamicHeat(a, heatSettings));
+    const heatB = getHeatWeight(getDynamicHeat(b, heatSettings));
+    
+    if (heatA !== heatB) return heatB - heatA; // Maior peso primeiro
     return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
   });
 
@@ -56,27 +89,59 @@ export function MyLeadsTable({ leads, onStatusChange }: MyLeadsTableProps) {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {sortedLeads.map((lead) => {
-                const isHot = lead.temperature === 'quente';
+                const heat = getDynamicHeat(lead, heatSettings);
+                
+                // Definir cores com base na temperatura dinâmica
+                let rowColor = 'hover:bg-gray-50';
+                let nameColor = 'text-gray-900';
+                let phoneColor = 'text-indigo-500';
+                
+                if (heat === 'super_quente') {
+                  rowColor = 'bg-red-50 hover:bg-red-100';
+                  nameColor = 'text-red-900';
+                  phoneColor = 'text-red-500';
+                } else if (heat === 'quente') {
+                  rowColor = 'bg-orange-50 hover:bg-orange-100';
+                  nameColor = 'text-orange-900';
+                  phoneColor = 'text-orange-500';
+                } else if (heat === 'morno') {
+                  rowColor = 'bg-yellow-50 hover:bg-yellow-100';
+                  nameColor = 'text-yellow-900';
+                  phoneColor = 'text-yellow-600';
+                }
+
                 return (
-                  <tr key={lead.id} className={`transition-colors ${isHot ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50'}`}>
+                  <tr key={lead.id} className={`transition-colors ${rowColor}`}>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <p className={`font-semibold text-base ${isHot ? 'text-red-900' : 'text-gray-900'}`}>{lead.name}</p>
-                        {isHot && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 animate-pulse">
-                            🔥 URGENTE
+                        <p className={`font-semibold text-base ${nameColor}`}>{lead.name}</p>
+                        
+                        {/* Badges de Temperatura */}
+                        {heat === 'super_quente' && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 animate-pulse border border-red-200">
+                            <Flame className="w-3 h-3 mr-1" /> SUPER QUENTE
+                          </span>
+                        )}
+                        {heat === 'quente' && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-orange-100 text-orange-800 border border-orange-200">
+                            <ThermometerSun className="w-3 h-3 mr-1" /> QUENTE
+                          </span>
+                        )}
+                        {heat === 'morno' && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-200">
+                            <AlertTriangle className="w-3 h-3 mr-1" /> MORNO
                           </span>
                         )}
                       </div>
-                      <p className={`text-xs mt-1 ${isHot ? 'text-red-500' : 'text-gray-400'}`}>
-                        Última att: {new Date(lead.updated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      <p className={`text-xs mt-1 ${heat !== 'frio' ? 'text-gray-600 font-medium' : 'text-gray-400'}`}>
+                        Cakto Att: {lead.cakto_updated_at ? new Date(lead.cakto_updated_at).toLocaleDateString('pt-BR') : 'Data não informada'}
                       </p>
                     </td>
                     <td className="px-6 py-4 space-y-2">
                       {lead.phone && (
                         <div className="flex items-center text-gray-600">
-                          <Phone className={`w-4 h-4 mr-2 ${isHot ? 'text-red-500' : 'text-indigo-500'}`} />
-                          <a href={`https://wa.me/${lead.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className={`font-medium ${isHot ? 'text-red-700 hover:text-red-900' : 'hover:text-indigo-600'}`}>
+                          <Phone className={`w-4 h-4 mr-2 ${phoneColor}`} />
+                          <a href={`https://wa.me/${lead.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className={`font-medium hover:opacity-75 ${phoneColor}`}>
                             {lead.phone}
                           </a>
                         </div>

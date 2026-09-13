@@ -13,9 +13,16 @@ export default function ColaboradorDashboard() {
   const [isPulling, setIsPulling] = useState(false)
   const [session, setSession] = useState<any>(null)
   const [isActive, setIsActive] = useState(true)
+  const [heatSettings, setHeatSettings] = useState({ super_hot_days: 2, hot_days: 7, warm_days: 30 })
 
   const fetchData = async (userId: string) => {
     try {
+      // Buscar configuracoes de temperatura
+      const { data: settings } = await supabase.from('system_settings').select('*').eq('id', 1).single()
+      if (settings) {
+        setHeatSettings(settings)
+      }
+
       // Checar se o colaborador est ativo
       const { data: profile } = await supabase
         .from('profiles')
@@ -41,7 +48,7 @@ export default function ColaboradorDashboard() {
       // Buscar leads atuais do colaborador (onde ele o responsvel e no finalizou)
       const { data: leadsData } = await supabase
         .from('leads')
-        .select('id, name, phone, email, status, temperature, updated_at')
+        .select('id, name, phone, email, status, temperature, cakto_updated_at, updated_at')
         .eq('current_assignee_id', userId)
         .not('status', 'in', '("recuperado","perdido")')
         .order('updated_at', { ascending: false })
@@ -75,11 +82,10 @@ export default function ColaboradorDashboard() {
               filter: `current_assignee_id=eq.${session.user.id}`
             },
             (payload) => {
-              console.log('NOVO LEAD QUENTE!', payload.new)
+              console.log('NOVO LEAD!', payload.new)
               const novoLead = payload.new as MyLead
               // Adiciona na mesa imediatamente
               setMyLeads(prev => {
-                // Previne duplicidade caso venha rápido
                 if (prev.find(l => l.id === novoLead.id)) return prev
                 return [novoLead, ...prev]
               })
@@ -188,6 +194,7 @@ export default function ColaboradorDashboard() {
       <MyLeadsTable 
         leads={myLeads} 
         onStatusChange={handleStatusChange} 
+        heatSettings={heatSettings}
       />
     </div>
   )
