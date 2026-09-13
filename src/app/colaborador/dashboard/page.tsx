@@ -96,6 +96,10 @@ export default function ColaboradorDashboard() {
         return () => {
           supabase.removeChannel(channel)
         }
+      } else {
+        // Se não tiver usuário logado, manda pro login e para o loading
+        setLoading(false)
+        window.location.href = '/login'
       }
     })
   }, [])
