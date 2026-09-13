@@ -41,7 +41,7 @@ export default function ColaboradorDashboard() {
       // Buscar leads atuais do colaborador (onde ele o responsvel e no finalizou)
       const { data: leadsData } = await supabase
         .from('leads')
-        .select('id, name, phone, email, status, updated_at')
+        .select('id, name, phone, email, status, temperature, updated_at')
         .eq('current_assignee_id', userId)
         .not('status', 'in', '("recuperado","perdido")')
         .order('updated_at', { ascending: false })
@@ -62,6 +62,34 @@ export default function ColaboradorDashboard() {
       setSession(session)
       if (session?.user) {
         fetchData(session.user.id)
+        
+        // Ativar o Rádio (Realtime WebSocket)
+        const channel = supabase
+          .channel('realtime_leads')
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'leads',
+              filter: `current_assignee_id=eq.${session.user.id}`
+            },
+            (payload) => {
+              console.log('NOVO LEAD QUENTE!', payload.new)
+              const novoLead = payload.new as MyLead
+              // Adiciona na mesa imediatamente
+              setMyLeads(prev => {
+                // Previne duplicidade caso venha rápido
+                if (prev.find(l => l.id === novoLead.id)) return prev
+                return [novoLead, ...prev]
+              })
+            }
+          )
+          .subscribe()
+
+        return () => {
+          supabase.removeChannel(channel)
+        }
       }
     })
   }, [])
