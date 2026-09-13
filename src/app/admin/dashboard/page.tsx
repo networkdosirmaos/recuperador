@@ -47,8 +47,7 @@ export default function AdminDashboard() {
             name,
             status,
             updated_at,
-            products(name),
-            profiles!leads_assigned_to_fkey(name)
+            profiles!leads_current_assignee_id_fkey(name)
           `)
           .order('created_at', { ascending: false })
           .limit(10)
@@ -57,7 +56,7 @@ export default function AdminDashboard() {
           const formattedLeads = leads.map(l => ({
             id: l.id,
             name: l.name,
-            product: l.products ? (l.products as any).name : 'Produto Desconhecido',
+            product: 'N/A', // Produto mockado temporariamente
             status: l.status,
             assigned_to: l.profiles ? (l.profiles as any).name : null,
             updated_at: l.updated_at
