@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PullLeadsCard } from '@/components/colaborador/PullLeadsCard'
 import { MyLeadsTable, MyLead } from '@/components/colaborador/MyLeadsTable'
+import { AlertCircle } from 'lucide-react'
 
 export default function ColaboradorDashboard() {
   const [loading, setLoading] = useState(true)
@@ -11,9 +12,23 @@ export default function ColaboradorDashboard() {
   const [myLeads, setMyLeads] = useState<MyLead[]>([])
   const [isPulling, setIsPulling] = useState(false)
   const [session, setSession] = useState<any>(null)
+  const [isActive, setIsActive] = useState(true)
 
   const fetchData = async (userId: string) => {
     try {
+      // Checar se o colaborador est ativo
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_active')
+        .eq('id', userId)
+        .single()
+        
+      if (profile && profile.is_active === false) {
+        setIsActive(false)
+      } else {
+        setIsActive(true)
+      }
+
       // Buscar listas ativas
       const { data: listsData } = await supabase
         .from('lead_lists')
@@ -23,7 +38,7 @@ export default function ColaboradorDashboard() {
 
       if (listsData) setLists(listsData)
 
-      // Buscar leads atuais do colaborador (onde ele é o responsável e não finalizou)
+      // Buscar leads atuais do colaborador (onde ele o responsvel e no finalizou)
       const { data: leadsData } = await supabase
         .from('leads')
         .select('id, name, phone, email, status, updated_at')
@@ -42,7 +57,7 @@ export default function ColaboradorDashboard() {
   }
 
   useEffect(() => {
-    // Pegar o usuário logado
+    // Pegar o usurio logado
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       if (session?.user) {
@@ -56,10 +71,10 @@ export default function ColaboradorDashboard() {
     
     setIsPulling(true)
     try {
-      // Chamar a RPC para distribuir os leads atomica e exclusivamente para este usuário
+      // Chamar a RPC para distribuir os leads atomica e exclusivamente para este usurio
       const { data: count, error } = await supabase.rpc('distribute_leads', {
         p_assignee_id: session.user.id,
-        p_assigned_by: session.user.id, // O próprio colaborador está se auto-atribuindo
+        p_assigned_by: session.user.id, // O prprio colaborador est se auto-atribuindo
         p_list_id: listId,
         p_limit: 10
       })
@@ -68,7 +83,7 @@ export default function ColaboradorDashboard() {
         console.error('Erro ao puxar leads:', error)
         alert('Erro ao puxar leads. Tente novamente.')
       } else if (count === 0) {
-        alert('Não há leads novos disponíveis nesta lista.')
+        alert('No h leads novos disponveis nesta lista.')
       } else {
         // Recarregar a mesa de trabalho
         await fetchData(session.user.id)
@@ -94,7 +109,7 @@ export default function ColaboradorDashboard() {
 
       if (error) throw error
 
-      // Se foi finalizado (recuperado ou perdido), removemos da mesa após 1 segundo
+      // Se foi finalizado (recuperado ou perdido), removemos da mesa aps 1 segundo
       if (newStatus === 'recuperado' || newStatus === 'perdido') {
         setTimeout(() => {
           setMyLeads(prev => prev.filter(l => l.id !== leadId))
@@ -104,7 +119,7 @@ export default function ColaboradorDashboard() {
     } catch (error) {
       console.error('Erro ao atualizar status:', error)
       alert('Falha ao atualizar o status.')
-      // Em caso de erro, seria bom reverter o estado otimista, mas para MVP está ok
+      // Em caso de erro, seria bom reverter o estado otimista, mas para MVP est ok
     }
   }
 
@@ -123,11 +138,24 @@ export default function ColaboradorDashboard() {
         <p className="text-gray-500 mt-1">Pronto para bater a meta de hoje? Puxe novos leads e boas vendas.</p>
       </div>
 
-      <PullLeadsCard 
-        lists={lists} 
-        onPullLeads={handlePullLeads} 
-        isLoading={isPulling} 
-      />
+      {!isActive ? (
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-6 flex items-start">
+          <AlertCircle className="w-6 h-6 text-orange-600 mr-4 flex-shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-lg font-semibold text-orange-800">Sua conta est pausada</h3>
+            <p className="text-orange-700 mt-1">
+              O Administrador pausou o seu recebimento de novos leads temporariamente. 
+              Voc ainda pode finalizar o atendimento dos clientes que j esto na sua mesa abaixo.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <PullLeadsCard 
+          lists={lists} 
+          onPullLeads={handlePullLeads} 
+          isLoading={isPulling} 
+        />
+      )}
 
       <MyLeadsTable 
         leads={myLeads} 
