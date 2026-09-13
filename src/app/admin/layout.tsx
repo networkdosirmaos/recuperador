@@ -9,7 +9,8 @@ import {
   UploadCloud, 
   Settings, 
   LogOut,
-  Target
+  Target,
+  Webhook
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -24,6 +25,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const menuItems = [
     { name: 'Visão Geral', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Upload de Leads', href: '/admin/upload', icon: UploadCloud },
+    { name: 'Integrações', href: '/admin/integracoes', icon: Webhook },
     { name: 'Equipe', href: '/admin/equipe', icon: Users },
     { name: 'Configurações', href: '/admin/configuracoes', icon: Settings },
   ]
