@@ -10,7 +10,8 @@ import {
   Settings, 
   LogOut,
   Target,
-  Webhook
+  Webhook,
+  Folder
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 

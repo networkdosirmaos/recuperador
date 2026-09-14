@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  const listId = params.id
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id: listId } = await params
   
   if (!listId) {
     return NextResponse.json({ error: 'ID da lista nao fornecido' }, { status: 400 })
