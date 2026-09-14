@@ -38,6 +38,26 @@ export async function POST(req: Request) {
     const paymentMethod = payloadData.paymentMethod || payloadData.payment_method || null
     const refusalReason = payloadData.reason || payloadData.refundReason || null
 
+    // ROLETA AUTOMÁTICA (ROUND-ROBIN)
+    let assignedSellerId = null
+    const { data: availableSellers } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('role', 'collaborator')
+      .eq('is_active', true)
+      .order('last_assigned_at', { ascending: true, nullsFirst: true })
+      .limit(1)
+
+    if (availableSellers && availableSellers.length > 0) {
+      assignedSellerId = availableSellers[0].id
+      
+      // Atualizar o cronômetro do vendedor escolhido (para ele ir pro fim da fila)
+      await supabaseAdmin
+        .from('profiles')
+        .update({ last_assigned_at: new Date().toISOString() })
+        .eq('id', assignedSellerId)
+    }
+
     // Vamos registrar ATÉ OS TESTES como um lead no seu CRM para podermos inspecionar o Payload.
     const isPing = event === 'ping' || event === 'test_webhook' || (!nome && !email && !phone)
 
@@ -53,14 +73,14 @@ export async function POST(req: Request) {
       chargedback_at: payloadData.chargedbackAt || null,
       refund_reason: payloadData.refundReason || payloadData.refund_reason || null,
       payment_method: paymentMethod,
-      // Se for teste, gravamos o JSON inteiro da Cakto no campo Reason para debug!
-      reason: isPing ? JSON.stringify(body).substring(0, 900) : refusalReason,
+      reason: isPing ? 'Webhook de Teste/Ping recebido com sucesso' : refusalReason,
       gateway_status: gatewayStatus,
       gateway_event: event,
       gateway_metadata: body,
       list_id: listId,
       status: 'novo', 
-      temperature: (gatewayStatus === 'waiting_payment' || gatewayStatus === 'pending' || event.includes('abandonment')) ? 'quente' : 'frio' 
+      temperature: (gatewayStatus === 'waiting_payment' || gatewayStatus === 'pending' || event.includes('abandonment')) ? 'quente' : 'frio',
+      current_assignee_id: assignedSellerId 
     }
 
     const { error } = await supabaseAdmin

@@ -37,5 +37,27 @@ export const adminService = {
     const { data, error } = await query
     if (error) throw error
     return data || []
+  },
+
+  async getCollaborators() {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, is_active')
+      .eq('role', 'collaborator')
+      .order('full_name')
+    if (error) throw error
+    return data || []
+  },
+
+  async assignLead(leadId: string, collaboratorId: string | null) {
+    const { error } = await supabase
+      .from('leads')
+      .update({ 
+        current_assignee_id: collaboratorId, 
+        updated_at: new Date().toISOString() 
+      })
+      .eq('id', leadId)
+    
+    if (error) throw error
   }
 }

@@ -6,15 +6,20 @@ import { supabase } from '@/lib/supabase'
 import { Users, Search, Filter, Loader2, Info, CreditCard, QrCode, FileText } from 'lucide-react'
 import { LeadDetailsModal } from '@/components/LeadDetailsModal'
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminService } from '@/services/admin.service'
 
 function BaseDeLeadsContent() {
   const searchParams = useSearchParams()
+  const queryClient = useQueryClient()
   const initialListId = searchParams.get('listId') || 'all'
 
   const [selectedLead, setSelectedLead] = useState<any>(null)
   
+  // Modal de Transferência
+  const [transferModal, setTransferModal] = useState<{ isOpen: boolean, leadId: string | null }>({ isOpen: false, leadId: null })
+  const [selectedCollaborator, setSelectedCollaborator] = useState<string | null>(null)
+
   // Filtros Visuais (Inputs)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedList, setSelectedList] = useState(initialListId)
@@ -43,13 +48,41 @@ function BaseDeLeadsContent() {
     queryFn: adminService.getLeadLists
   })
 
+  const { data: collaborators = [], isLoading: loadingCollaborators } = useQuery({
+    queryKey: ['admin_collaborators'],
+    queryFn: adminService.getCollaborators
+  })
+
   const { data: leads = [], isLoading: isLoadingLeads, isFetching } = useQuery({
     queryKey: ['admin_leads', activeFilters],
     queryFn: () => adminService.searchLeads(activeFilters)
   })
 
-  const loading = loadingLists || isLoadingLeads;
+  const loading = loadingLists || loadingCollaborators || isLoadingLeads;
   const searching = isFetching;
+
+  // Mutations
+  const assignLeadMutation = useMutation({
+    mutationFn: ({ leadId, collabId }: { leadId: string, collabId: string | null }) => 
+      adminService.assignLead(leadId, collabId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin_leads'] })
+      setTransferModal({ isOpen: false, leadId: null })
+      alert('Lead transferido com sucesso!')
+    },
+    onError: (err) => {
+      console.error(err)
+      alert('Erro ao transferir lead.')
+    }
+  })
+
+  const handleTransfer = () => {
+    if (!transferModal.leadId) return
+    assignLeadMutation.mutate({ 
+      leadId: transferModal.leadId, 
+      collabId: selectedCollaborator === 'none' ? null : selectedCollaborator 
+    })
+  }
 
   const executeSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault()
@@ -262,18 +295,36 @@ function BaseDeLeadsContent() {
                       <div className="mb-1">{getStatusBadge(lead.status)}</div>
                     </td>
                     <td className="p-4">
-                      <div className="text-sm text-gray-700">
-                        {lead.profiles?.full_name || <span className="text-gray-400 italic">Na Fila</span>}
-                      </div>
+                      {lead.current_assignee_id ? (
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                          <span className="text-sm font-medium text-gray-900">
+                            {collaborators.find((c: any) => c.id === lead.current_assignee_id)?.full_name || 'Vendedor'}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400 font-medium">Sem dono</span>
+                      )}
                     </td>
-                    <td className="p-4 sticky right-0 bg-white shadow-[inset_1px_0_0_rgba(0,0,0,0.05)]">
-                      <button
-                        onClick={() => setSelectedLead(lead)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded hover:bg-black transition-colors"
-                      >
-                        <Info className="w-3.5 h-3.5" />
-                        Ficha
-                      </button>
+                    <td className="p-4 sticky right-0 bg-gray-50 shadow-[inset_1px_0_0_rgba(0,0,0,0.1)]">
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => setSelectedLead(lead)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded hover:bg-black transition-colors"
+                        >
+                          <Info className="w-3.5 h-3.5" />
+                          Ficha
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setSelectedCollaborator(lead.current_assignee_id || 'none')
+                            setTransferModal({ isOpen: true, leadId: lead.id })
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded hover:bg-indigo-100 transition-colors border border-indigo-200"
+                        >
+                          Transferir
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -291,11 +342,50 @@ function BaseDeLeadsContent() {
       </div>
 
       <LeadDetailsModal 
-        isOpen={selectedLead !== null} 
-        onClose={() => setSelectedLead(null)} 
-        lead={selectedLead} 
-        viewType="admin" 
+        isOpen={!!selectedLead}
+        onClose={() => setSelectedLead(null)}
+        lead={selectedLead}
+        viewType="admin"
       />
+
+      {/* Modal de Transferência */}
+      {transferModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Transferir Lead</h3>
+            <p className="text-sm text-gray-500 mb-4">Selecione o vendedor que irá assumir este cliente.</p>
+            
+            <select 
+              value={selectedCollaborator || 'none'}
+              onChange={(e) => setSelectedCollaborator(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-700 mb-4"
+            >
+              <option value="none">-- Sem dono (Remover da Fila) --</option>
+              {collaborators.map((c: any) => (
+                <option key={c.id} value={c.id}>
+                  {c.full_name || c.email} {c.is_active ? '(Ativo)' : '(Pausado)'}
+                </option>
+              ))}
+            </select>
+
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setTransferModal({ isOpen: false, leadId: null })}
+                className="px-4 py-2 text-gray-600 font-medium hover:bg-gray-100 rounded-lg"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleTransfer}
+                disabled={assignLeadMutation.isPending}
+                className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {assignLeadMutation.isPending ? 'Transferindo...' : 'Confirmar Transferência'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
