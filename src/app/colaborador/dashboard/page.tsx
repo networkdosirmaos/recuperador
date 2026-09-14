@@ -15,12 +15,17 @@ export default function ColaboradorDashboard() {
   const [isActive, setIsActive] = useState(true)
   const [heatSettings, setHeatSettings] = useState({ super_hot_days: 2, hot_days: 7, warm_days: 30 })
 
+  const [operatorConfig, setOperatorConfig] = useState<any>(null)
+
   const fetchData = async (userId: string) => {
     try {
       // Buscar configuracoes de temperatura
       const { data: settings } = await supabase.from('system_settings').select('*').eq('id', 1).single()
       if (settings) {
         setHeatSettings(settings)
+        if (settings.operator_columns_config) {
+          setOperatorConfig(settings.operator_columns_config)
+        }
       }
 
       // Checar se o colaborador est ativo
@@ -212,6 +217,7 @@ export default function ColaboradorDashboard() {
         leads={myLeads} 
         onStatusChange={handleStatusChange} 
         heatSettings={heatSettings}
+        operatorConfig={operatorConfig}
       />
     </div>
   )

@@ -29,6 +29,7 @@ interface MyLeadsTableProps {
   leads: MyLead[]
   onStatusChange: (leadId: string, newStatus: string) => Promise<void>
   heatSettings?: HeatSettings
+  operatorConfig?: any
 }
 
 const statusOptions = [
@@ -62,9 +63,17 @@ const getHeatWeight = (heat: string) => {
   return 1;
 }
 
-export function MyLeadsTable({ leads, onStatusChange, heatSettings }: MyLeadsTableProps) {
+export function MyLeadsTable({ leads, onStatusChange, heatSettings, operatorConfig }: MyLeadsTableProps) {
   const [selectedLead, setSelectedLead] = useState<MyLead | null>(null)
   
+  const config = operatorConfig || {
+    show_product: true,
+    show_payment_method: true,
+    show_cakto_status: false,
+    show_reason: false,
+    show_cakto_updated_at: false
+  }
+
   const sortedLeads = [...leads].sort((a, b) => {
     const heatA = getHeatWeight(getDynamicHeat(a, heatSettings));
     const heatB = getHeatWeight(getDynamicHeat(b, heatSettings));
@@ -146,17 +155,31 @@ export function MyLeadsTable({ leads, onStatusChange, heatSettings }: MyLeadsTab
                               🔥 QUENTE
                             </span>
                           )}
-                          <p className="text-[10px] text-gray-400">
-                            {lead.cakto_updated_at ? new Date(lead.cakto_updated_at).toLocaleDateString('pt-BR') : ''}
-                          </p>
+                          {config.show_cakto_updated_at && (
+                            <p className="text-[10px] text-gray-400 font-medium">
+                              {lead.cakto_updated_at ? new Date(lead.cakto_updated_at).toLocaleDateString('pt-BR') : ''}
+                            </p>
+                          )}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-gray-700">{lead.product_name || 'Produto Padrão'}</div>
-                        {lead.payment_method && (
-                          <div className="flex items-center gap-1 mt-1 text-xs text-gray-500 uppercase font-semibold">
+                      <td className="px-6 py-4 space-y-1">
+                        {config.show_product && (
+                          <div className="font-medium text-gray-700">{lead.product_name || 'Produto Padrão'}</div>
+                        )}
+                        {config.show_payment_method && lead.payment_method && (
+                          <div className="flex items-center gap-1 text-xs text-gray-500 uppercase font-semibold">
                             {getPaymentIcon(lead.payment_method)}
                             {lead.payment_method === 'credit_card' ? 'Cartão' : lead.payment_method}
+                          </div>
+                        )}
+                        {config.show_cakto_status && lead.cakto_status && (
+                          <div className="text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded inline-block font-medium">
+                            Status: {lead.cakto_status}
+                          </div>
+                        )}
+                        {config.show_reason && lead.reason && (
+                          <div className="text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded block font-medium">
+                            Motivo: {lead.reason}
                           </div>
                         )}
                       </td>

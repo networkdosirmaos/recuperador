@@ -7,10 +7,22 @@ import { Save, Settings2, Flame, ThermometerSun, AlertTriangle, Snowflake } from
 export default function ConfiguracoesPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<{
+    super_hot_days: number;
+    hot_days: number;
+    warm_days: number;
+    operator_columns_config?: any;
+  }>({
     super_hot_days: 2,
     hot_days: 7,
-    warm_days: 30
+    warm_days: 30,
+    operator_columns_config: {
+      show_product: true,
+      show_payment_method: true,
+      show_cakto_status: false,
+      show_reason: false,
+      show_cakto_updated_at: false
+    }
   })
 
   useEffect(() => {
@@ -30,7 +42,8 @@ export default function ConfiguracoesPage() {
         setSettings({
           super_hot_days: data.super_hot_days,
           hot_days: data.hot_days,
-          warm_days: data.warm_days
+          warm_days: data.warm_days,
+          operator_columns_config: data.operator_columns_config || settings.operator_columns_config
         })
       }
     } catch (error) {
@@ -49,6 +62,7 @@ export default function ConfiguracoesPage() {
           super_hot_days: settings.super_hot_days,
           hot_days: settings.hot_days,
           warm_days: settings.warm_days,
+          operator_columns_config: settings.operator_columns_config,
           updated_at: new Date().toISOString()
         })
         .eq('id', 1)
@@ -171,6 +185,53 @@ export default function ConfiguracoesPage() {
             <p>Qualquer lead que passe de <strong>{settings.warm_days} dias</strong> da atualização da Cakto será automaticamente classificado como <strong>Frio</strong>.</p>
           </div>
         </div>
+      </div>
+
+      {/* NOVO BLOCO: VISÃO DO OPERADOR */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mt-8">
+        <div className="px-6 py-5 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Visão da Equipe (Mesa de Trabalho)</h3>
+            <p className="text-sm text-gray-500 mt-1">Escolha quais colunas os vendedores podem ver na tabela deles.</p>
+          </div>
+        </div>
+        
+        <div className="p-6 space-y-4">
+          <label className="flex items-center space-x-3 cursor-pointer">
+            <input type="checkbox" checked={settings.operator_columns_config?.show_product ?? true} 
+              onChange={(e) => setSettings({...settings, operator_columns_config: {...settings.operator_columns_config, show_product: e.target.checked}})} 
+              className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
+            <span className="text-gray-700 font-medium">Mostrar Nome do Produto</span>
+          </label>
+
+          <label className="flex items-center space-x-3 cursor-pointer">
+            <input type="checkbox" checked={settings.operator_columns_config?.show_payment_method ?? true} 
+              onChange={(e) => setSettings({...settings, operator_columns_config: {...settings.operator_columns_config, show_payment_method: e.target.checked}})} 
+              className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
+            <span className="text-gray-700 font-medium">Mostrar Forma de Pagamento (Cartão/Pix)</span>
+          </label>
+
+          <label className="flex items-center space-x-3 cursor-pointer">
+            <input type="checkbox" checked={settings.operator_columns_config?.show_cakto_status ?? false} 
+              onChange={(e) => setSettings({...settings, operator_columns_config: {...settings.operator_columns_config, show_cakto_status: e.target.checked}})} 
+              className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
+            <span className="text-gray-700 font-medium">Mostrar Status Original (Gateway)</span>
+          </label>
+
+          <label className="flex items-center space-x-3 cursor-pointer">
+            <input type="checkbox" checked={settings.operator_columns_config?.show_reason ?? false} 
+              onChange={(e) => setSettings({...settings, operator_columns_config: {...settings.operator_columns_config, show_reason: e.target.checked}})} 
+              className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
+            <span className="text-gray-700 font-medium">Mostrar Motivo da Recusa (Reason)</span>
+          </label>
+
+          <label className="flex items-center space-x-3 cursor-pointer">
+            <input type="checkbox" checked={settings.operator_columns_config?.show_cakto_updated_at ?? false} 
+              onChange={(e) => setSettings({...settings, operator_columns_config: {...settings.operator_columns_config, show_cakto_updated_at: e.target.checked}})} 
+              className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
+            <span className="text-gray-700 font-medium">Mostrar Data de Atualização no Gateway</span>
+          </label>
+        </div>
 
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
           <button
@@ -179,7 +240,7 @@ export default function ConfiguracoesPage() {
             className="flex items-center bg-indigo-600 text-white px-5 py-2.5 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 font-medium"
           >
             <Save className="w-4 h-4 mr-2" />
-            {saving ? 'Salvando...' : 'Salvar Regras'}
+            {saving ? 'Salvando...' : 'Salvar Todas as Configurações'}
           </button>
         </div>
       </div>
