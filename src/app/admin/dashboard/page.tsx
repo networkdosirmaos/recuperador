@@ -6,9 +6,11 @@ import { supabase } from '@/lib/supabase'
 import { KpiCard } from '@/components/KpiCard'
 import { RecentLeadsTable } from '@/components/RecentLeadsTable'
 import { TeamRanking } from '@/components/TeamRanking'
+import { HeatSettings } from '@/utils/heatCalculator'
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
+  const [heatSettings, setHeatSettings] = useState<HeatSettings | null>(null)
   const [metrics, setMetrics] = useState({
     total: 0,
     pending: 0,
@@ -23,6 +25,12 @@ export default function AdminDashboard() {
     async function fetchDashboardData() {
       try {
         setLoading(true)
+
+        // Buscar configs de temperatura primeiro
+        const { data: settingsData } = await supabase.from('system_settings').select('*').eq('id', 1).single()
+        if (settingsData) {
+          setHeatSettings(settingsData)
+        }
 
         // Fetch KPIs
         const { count: total } = await supabase.from('leads').select('*', { count: 'exact', head: true })
@@ -127,7 +135,7 @@ export default function AdminDashboard() {
       {/* Main Content Split */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <RecentLeadsTable leads={recentLeads} />
+          <RecentLeadsTable leads={recentLeads} heatSettings={heatSettings} />
         </div>
         <div>
           <TeamRanking team={teamRanking} />

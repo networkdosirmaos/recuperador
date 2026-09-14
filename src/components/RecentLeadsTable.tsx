@@ -1,4 +1,5 @@
 import { FileText } from 'lucide-react'
+import { HeatSettings, getDynamicHeat, getHeatBadgeStyle } from '@/utils/heatCalculator'
 
 type Lead = {
   id: string
@@ -11,27 +12,10 @@ type Lead = {
 
 interface RecentLeadsTableProps {
   leads: Lead[]
+  heatSettings?: HeatSettings | null
 }
 
-const statusColors: Record<string, string> = {
-  'novo': 'bg-blue-100 text-blue-800',
-  'em_atendimento': 'bg-yellow-100 text-yellow-800',
-  'boleto_gerado': 'bg-orange-100 text-orange-800',
-  'pix_gerado': 'bg-purple-100 text-purple-800',
-  'recuperado': 'bg-green-100 text-green-800',
-  'perdido': 'bg-red-100 text-red-800',
-}
-
-const statusLabels: Record<string, string> = {
-  'novo': 'Novo',
-  'em_atendimento': 'Em Atendimento',
-  'boleto_gerado': 'Boleto Gerado',
-  'pix_gerado': 'Pix Gerado',
-  'recuperado': 'Recuperado',
-  'perdido': 'Perdido',
-}
-
-export function RecentLeadsTable({ leads }: RecentLeadsTableProps) {
+export function RecentLeadsTable({ leads, heatSettings }: RecentLeadsTableProps) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
       <div className="px-6 py-5 border-b border-gray-200 flex items-center justify-between">
@@ -50,29 +34,34 @@ export function RecentLeadsTable({ leads }: RecentLeadsTableProps) {
               <tr>
                 <th className="px-6 py-4">Nome do Lead</th>
                 <th className="px-6 py-4">Produto</th>
-                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Temperatura</th>
                 <th className="px-6 py-4">Responsável</th>
-                <th className="px-6 py-4">Última Atualização</th>
+                <th className="px-6 py-4">Entrada / Atualização</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {leads.map((lead) => (
-                <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900">{lead.name}</td>
-                  <td className="px-6 py-4 text-gray-600">{lead.product}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusColors[lead.status] || 'bg-gray-100 text-gray-800'}`}>
-                      {statusLabels[lead.status] || lead.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-gray-600">
-                    {lead.assigned_to ? lead.assigned_to : <span className="text-gray-400 italic">Na fila</span>}
-                  </td>
-                  <td className="px-6 py-4 text-gray-500">
-                    {new Date(lead.updated_at).toLocaleString('pt-BR')}
-                  </td>
-                </tr>
-              ))}
+              {leads.map((lead) => {
+                const heatLevel = getDynamicHeat(lead.updated_at, heatSettings || null)
+                const badge = getHeatBadgeStyle(heatLevel)
+
+                return (
+                  <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-gray-900">{lead.name}</td>
+                    <td className="px-6 py-4 text-gray-600">{lead.product}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${badge.color}`}>
+                        {badge.label}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-gray-600">
+                      {lead.assigned_to ? lead.assigned_to : <span className="text-gray-400 italic">Na fila</span>}
+                    </td>
+                    <td className="px-6 py-4 text-gray-500">
+                      {new Date(lead.updated_at).toLocaleString('pt-BR')}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
