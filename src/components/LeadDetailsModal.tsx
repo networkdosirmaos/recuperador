@@ -1,4 +1,4 @@
-import { X, CreditCard, Activity, User, Mail, Phone, ShoppingBag, Calendar, AlertCircle } from 'lucide-react'
+import { X, CreditCard, Activity, User, Mail, Phone, ShoppingBag, Calendar, AlertCircle, Code, CheckCircle2, XCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useQuery } from '@tanstack/react-query'
@@ -13,7 +13,7 @@ type LeadDetailsModalProps = {
 }
 
 export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborador' }: LeadDetailsModalProps) {
-  const [activeTab, setActiveTab] = useState<'details' | 'timeline'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'timeline' | 'debug'>('details')
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null)
 
   const { data: events = [], isLoading: loadingEvents } = useQuery({
@@ -78,15 +78,15 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
         </div>
 
         {/* Abas */}
-        <div className="flex px-6 border-b border-gray-100 bg-white">
+        <div className="flex px-6 border-b border-gray-100 bg-white overflow-x-auto">
           <button 
-            className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'details' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+            className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${activeTab === 'details' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
             onClick={() => setActiveTab('details')}
           >
             Detalhes do Cliente
           </button>
           <button 
-            className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'timeline' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+            className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'timeline' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
             onClick={() => setActiveTab('timeline')}
           >
             Linha do Tempo
@@ -95,6 +95,13 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
                 {events.length}
               </span>
             )}
+          </button>
+          <button 
+            className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'debug' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+            onClick={() => setActiveTab('debug')}
+          >
+            <Code className="w-4 h-4" />
+            Auditoria / Integração
           </button>
         </div>
 
@@ -200,7 +207,7 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
                 </div>
               )}
             </>
-          ) : (
+          ) : activeTab === 'timeline' ? (
             /* CONTEÚDO DA LINHA DO TEMPO */
             <div className="relative border-l-2 border-indigo-100 ml-4 space-y-8 pb-4">
               {loadingEvents ? (
@@ -265,6 +272,89 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
                   )
                 })
               )}
+            </div>
+          ) : (
+            /* CONTEÚDO DA ABA DE DEBUG / INTEGRAÇÃO */
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full min-h-[500px]">
+              {/* Lado Esquerdo: JSON Bruto */}
+              <div className="flex flex-col bg-gray-900 rounded-xl border border-gray-800 overflow-hidden shadow-sm">
+                <div className="bg-gray-800 px-4 py-3 border-b border-gray-700 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-gray-200 flex items-center gap-2">
+                    <Code className="w-4 h-4" /> Payload Bruto (Último Webhook)
+                  </h3>
+                  <div className="flex gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                  </div>
+                </div>
+                <div className="p-4 overflow-y-auto flex-1 max-h-[500px]">
+                  <pre className="text-green-400 font-mono text-[11px] leading-relaxed break-all whitespace-pre-wrap">
+                    {JSON.stringify(lead.gateway_metadata, null, 2)}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Lado Direito: De -> Para */}
+              <div className="flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-indigo-600" /> 
+                    Mapeamento de Colunas (De ➔ Para)
+                  </h3>
+                </div>
+                <div className="p-0 overflow-y-auto flex-1 max-h-[500px]">
+                  <table className="w-full text-left border-collapse text-sm">
+                    <thead className="bg-gray-50 border-b border-gray-100 text-xs uppercase text-gray-500 sticky top-0">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold">Chave JSON (Cakto)</th>
+                        <th className="px-4 py-3 font-semibold">Coluna CRM</th>
+                        <th className="px-4 py-3 font-semibold text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {(() => {
+                        const payload = lead.gateway_metadata || {}
+                        const dataObj = payload?.data?.[0] || {}
+                        
+                        const mappings = [
+                          { jsonKey: 'data[0].customerName', jsonVal: dataObj.customerName, dbKey: 'Nome', dbVal: lead.name },
+                          { jsonKey: 'data[0].customerEmail', jsonVal: dataObj.customerEmail, dbKey: 'E-mail', dbVal: lead.email },
+                          { jsonKey: 'data[0].customerCellphone', jsonVal: dataObj.customerCellphone, dbKey: 'Telefone', dbVal: lead.phone },
+                          { jsonKey: 'data[0].product.name', jsonVal: dataObj.product?.name, dbKey: 'Produto', dbVal: lead.product_name },
+                          { jsonKey: 'data[0].paymentMethod', jsonVal: dataObj.paymentMethod, dbKey: 'Pagamento', dbVal: lead.payment_method },
+                          { jsonKey: 'event', jsonVal: payload.event, dbKey: 'Evento', dbVal: lead.gateway_event },
+                        ]
+
+                        return mappings.map((m, i) => {
+                          const isMissing = m.jsonVal && !m.dbVal
+                          
+                          return (
+                            <tr key={i} className={`transition-colors ${isMissing ? 'bg-orange-50/50' : 'hover:bg-gray-50'}`}>
+                              <td className="px-4 py-3 font-mono text-[11px] text-gray-500 break-all w-1/3">
+                                {m.jsonKey}
+                              </td>
+                              <td className="px-4 py-3 w-1/2">
+                                <div className="font-semibold text-gray-900">{m.dbKey}</div>
+                                <div className="text-xs text-gray-500 truncate max-w-[150px]" title={m.dbVal}>{m.dbVal || 'Vazio'}</div>
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                {!m.jsonVal ? (
+                                  <span className="text-[10px] text-gray-400 font-medium bg-gray-100 px-2 py-0.5 rounded-full">N/A</span>
+                                ) : !isMissing ? (
+                                  <CheckCircle2 className="w-5 h-5 text-emerald-500 mx-auto" />
+                                ) : (
+                                  <AlertCircle className="w-5 h-5 text-orange-500 mx-auto" title="Dado no JSON ignorado ou não capturado" />
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
 
