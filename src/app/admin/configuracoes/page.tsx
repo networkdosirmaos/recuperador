@@ -19,9 +19,9 @@ export default function ConfiguracoesPage() {
     operator_columns_config: {
       show_product: true,
       show_payment_method: true,
-      show_cakto_status: false,
+      show_gateway_status: false,
       show_reason: false,
-      show_cakto_updated_at: false
+      show_gateway_updated_at: false
     }
   })
 
@@ -212,8 +212,8 @@ export default function ConfiguracoesPage() {
           </label>
 
           <label className="flex items-center space-x-3 cursor-pointer">
-            <input type="checkbox" checked={settings.operator_columns_config?.show_cakto_status ?? false} 
-              onChange={(e) => setSettings({...settings, operator_columns_config: {...settings.operator_columns_config, show_cakto_status: e.target.checked}})} 
+            <input type="checkbox" checked={settings.operator_columns_config?.show_gateway_status ?? false} 
+              onChange={(e) => setSettings({...settings, operator_columns_config: {...settings.operator_columns_config, show_gateway_status: e.target.checked}})} 
               className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
             <span className="text-gray-700 font-medium">Mostrar Status Original (Gateway)</span>
           </label>
@@ -226,8 +226,8 @@ export default function ConfiguracoesPage() {
           </label>
 
           <label className="flex items-center space-x-3 cursor-pointer">
-            <input type="checkbox" checked={settings.operator_columns_config?.show_cakto_updated_at ?? false} 
-              onChange={(e) => setSettings({...settings, operator_columns_config: {...settings.operator_columns_config, show_cakto_updated_at: e.target.checked}})} 
+            <input type="checkbox" checked={settings.operator_columns_config?.show_gateway_updated_at ?? false} 
+              onChange={(e) => setSettings({...settings, operator_columns_config: {...settings.operator_columns_config, show_gateway_updated_at: e.target.checked}})} 
               className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
             <span className="text-gray-700 font-medium">Mostrar Data de Atualização no Gateway</span>
           </label>

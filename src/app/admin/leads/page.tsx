@@ -31,10 +31,10 @@ function BaseDeLeadsContent() {
   const [showColumns, setShowColumns] = useState({
     origin: true,
     payment: true,
-    cakto_status: true,
-    cakto_event: false,
+    gateway_status: true,
+    gateway_event: false,
     reason: false,
-    updated_at: false
+    gateway_updated_at: false
   });
 
   // Queries
@@ -172,19 +172,19 @@ function BaseDeLeadsContent() {
             <span className="text-sm text-gray-700">Pagamento</span>
           </label>
           <label className="flex items-center space-x-2 cursor-pointer">
-            <input type="checkbox" checked={showColumns.cakto_status} onChange={(e) => setShowColumns({...showColumns, cakto_status: e.target.checked})} className="rounded text-indigo-600 focus:ring-indigo-500" />
-            <span className="text-sm text-gray-700">Status Cakto</span>
+            <input type="checkbox" checked={showColumns.gateway_status} onChange={(e) => setShowColumns({...showColumns, gateway_status: e.target.checked})} className="rounded text-indigo-600 focus:ring-indigo-500" />
+            <span className="text-sm text-gray-700">Status Gateway</span>
           </label>
           <label className="flex items-center space-x-2 cursor-pointer">
-            <input type="checkbox" checked={showColumns.cakto_event} onChange={(e) => setShowColumns({...showColumns, cakto_event: e.target.checked})} className="rounded text-indigo-600 focus:ring-indigo-500" />
-            <span className="text-sm text-gray-700">Evento Cakto</span>
+            <input type="checkbox" checked={showColumns.gateway_event} onChange={(e) => setShowColumns({...showColumns, gateway_event: e.target.checked})} className="rounded text-indigo-600 focus:ring-indigo-500" />
+            <span className="text-sm text-gray-700">Evento Gateway</span>
           </label>
           <label className="flex items-center space-x-2 cursor-pointer">
             <input type="checkbox" checked={showColumns.reason} onChange={(e) => setShowColumns({...showColumns, reason: e.target.checked})} className="rounded text-indigo-600 focus:ring-indigo-500" />
             <span className="text-sm text-gray-700">Motivo (Reason)</span>
           </label>
           <label className="flex items-center space-x-2 cursor-pointer">
-            <input type="checkbox" checked={showColumns.updated_at} onChange={(e) => setShowColumns({...showColumns, updated_at: e.target.checked})} className="rounded text-indigo-600 focus:ring-indigo-500" />
+            <input type="checkbox" checked={showColumns.gateway_updated_at} onChange={(e) => setShowColumns({...showColumns, gateway_updated_at: e.target.checked})} className="rounded text-indigo-600 focus:ring-indigo-500" />
             <span className="text-sm text-gray-700">Data Gateway</span>
           </label>
         </div>
@@ -203,10 +203,10 @@ function BaseDeLeadsContent() {
                   <th className="p-4">Produto</th>
                   {showColumns.origin && <th className="p-4">Origem</th>}
                   {showColumns.payment && <th className="p-4">Pagamento</th>}
-                  {showColumns.cakto_status && <th className="p-4">Status Cakto</th>}
-                  {showColumns.cakto_event && <th className="p-4">Evento</th>}
+                  {showColumns.gateway_status && <th className="p-4">Status Gateway</th>}
+                  {showColumns.gateway_event && <th className="p-4">Evento</th>}
                   {showColumns.reason && <th className="p-4">Motivo</th>}
-                  {showColumns.updated_at && <th className="p-4">Data Gateway</th>}
+                  {showColumns.gateway_updated_at && <th className="p-4">Data Gateway</th>}
                   <th className="p-4">Status CRM</th>
                   <th className="p-4">Vendedor Atual</th>
                   <th className="p-4 sticky right-0 bg-gray-50 shadow-[inset_1px_0_0_rgba(0,0,0,0.1)]">Ação</th>
@@ -238,14 +238,14 @@ function BaseDeLeadsContent() {
                         )}
                       </td>
                     )}
-                    {showColumns.cakto_status && (
+                    {showColumns.gateway_status && (
                       <td className="p-4 text-xs font-mono text-gray-600">
-                        {lead.cakto_status || '-'}
+                        {lead.gateway_status || '-'}
                       </td>
                     )}
-                    {showColumns.cakto_event && (
+                    {showColumns.gateway_event && (
                       <td className="p-4 text-xs text-gray-600">
-                        {lead.cakto_event || '-'}
+                        {lead.gateway_event || '-'}
                       </td>
                     )}
                     {showColumns.reason && (
@@ -253,9 +253,9 @@ function BaseDeLeadsContent() {
                         {lead.reason ? <span title={lead.reason}>{lead.reason.substring(0, 30)}...</span> : '-'}
                       </td>
                     )}
-                    {showColumns.updated_at && (
+                    {showColumns.gateway_updated_at && (
                       <td className="p-4 text-xs text-gray-500">
-                        {lead.cakto_updated_at ? new Date(lead.cakto_updated_at).toLocaleString('pt-BR') : '-'}
+                        {lead.gateway_updated_at ? new Date(lead.gateway_updated_at).toLocaleString('pt-BR') : '-'}
                       </td>
                     )}
                     <td className="p-4">

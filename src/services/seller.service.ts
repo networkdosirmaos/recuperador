@@ -26,7 +26,7 @@ export const sellerService = {
   async getMyLeads(userId: string) {
     const { data, error } = await supabase
       .from('leads')
-      .select('id, name, phone, email, product_name, status, temperature, updated_at, cakto_updated_at, payment_method, cakto_status, reason, cakto_event, created_at')
+      .select('id, name, phone, email, product_name, status, temperature, updated_at, gateway, gateway_updated_at, payment_method, gateway_status, reason, gateway_event, created_at')
       .eq('current_assignee_id', userId)
       .not('status', 'in', '("recuperado","perdido")')
       .order('updated_at', { ascending: false })

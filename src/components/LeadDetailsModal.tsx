@@ -153,12 +153,12 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType }: LeadModalP
                 </div>
               </div>
               <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                <p className="text-xs text-gray-500 mb-1">Cakto Status Original</p>
-                <p className="font-mono text-xs text-indigo-600 font-bold">{lead.cakto_status || 'N/A'}</p>
+                <p className="text-xs text-gray-500 mb-1">Status Original ({lead.gateway || 'Gateway'})</p>
+                <p className="font-mono text-xs text-indigo-600 font-bold">{lead.gateway_status || 'N/A'}</p>
               </div>
               <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                <p className="text-xs text-gray-500 mb-1">Cakto Evento (Webhook)</p>
-                <p className="font-mono text-xs text-indigo-600 font-bold">{lead.cakto_event || 'N/A'}</p>
+                <p className="text-xs text-gray-500 mb-1">Evento Webhook ({lead.gateway || 'Gateway'})</p>
+                <p className="font-mono text-xs text-indigo-600 font-bold">{lead.gateway_event || 'N/A'}</p>
               </div>
               <div className="md:col-span-3 bg-red-50 p-3 rounded-lg border border-red-100">
                 <p className="text-xs text-red-500 font-bold mb-1">Motivo de Falha / Erro (Reason)</p>
@@ -197,8 +197,8 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType }: LeadModalP
               </div>
               <div className="flex items-center gap-2 text-gray-600">
                 <Clock className="w-4 h-4" />
-                <span className="text-gray-500">Última Atualização Cakto:</span>
-                <span className="font-medium text-gray-900">{lead.cakto_updated_at ? new Date(lead.cakto_updated_at).toLocaleString() : 'N/A'}</span>
+                <span className="text-gray-500">Última Atualização ({lead.gateway || 'Gateway'}):</span>
+                <span className="font-medium text-gray-900">{lead.gateway_updated_at ? new Date(lead.gateway_updated_at).toLocaleString() : 'N/A'}</span>
               </div>
             </div>
           </section>

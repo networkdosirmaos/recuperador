@@ -9,13 +9,14 @@ export type MyLead = {
   email: string | null
   status: string
   temperature?: string
-  cakto_updated_at?: string
+  gateway?: string
+  gateway_updated_at?: string
   updated_at: string
   product_name?: string
   payment_method?: string
-  cakto_status?: string
+  gateway_status?: string
   reason?: string
-  cakto_event?: string
+  gateway_event?: string
   created_at?: string
 }
 
@@ -43,10 +44,10 @@ const statusOptions = [
 
 // Helper para calcular temperatura dinamicamente
 const getDynamicHeat = (lead: MyLead, settings?: HeatSettings) => {
-  if (!lead.cakto_updated_at) return lead.temperature || 'frio';
+  if (!lead.gateway_updated_at) return lead.temperature || 'frio';
   if (!settings) return 'frio';
 
-  const leadDate = new Date(lead.cakto_updated_at).getTime();
+  const leadDate = new Date(lead.gateway_updated_at).getTime();
   const now = new Date().getTime();
   const diffDays = Math.ceil(Math.abs(now - leadDate) / (1000 * 60 * 60 * 24));
 
@@ -69,9 +70,9 @@ export function MyLeadsTable({ leads, onStatusChange, heatSettings, operatorConf
   const config = operatorConfig || {
     show_product: true,
     show_payment_method: true,
-    show_cakto_status: false,
+    show_gateway_status: false,
     show_reason: false,
-    show_cakto_updated_at: false
+    show_gateway_updated_at: false
   }
 
   const sortedLeads = [...leads].sort((a, b) => {
@@ -155,9 +156,9 @@ export function MyLeadsTable({ leads, onStatusChange, heatSettings, operatorConf
                               🔥 QUENTE
                             </span>
                           )}
-                          {config.show_cakto_updated_at && (
+                          {config.show_gateway_updated_at && (
                             <p className="text-[10px] text-gray-400 font-medium">
-                              {lead.cakto_updated_at ? new Date(lead.cakto_updated_at).toLocaleDateString('pt-BR') : ''}
+                              {lead.gateway_updated_at ? new Date(lead.gateway_updated_at).toLocaleDateString('pt-BR') : ''}
                             </p>
                           )}
                         </div>
@@ -172,9 +173,9 @@ export function MyLeadsTable({ leads, onStatusChange, heatSettings, operatorConf
                             {lead.payment_method === 'credit_card' ? 'Cartão' : lead.payment_method}
                           </div>
                         )}
-                        {config.show_cakto_status && lead.cakto_status && (
+                        {config.show_gateway_status && lead.gateway_status && (
                           <div className="text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded inline-block font-medium">
-                            Status: {lead.cakto_status}
+                            Status: {lead.gateway_status}
                           </div>
                         )}
                         {config.show_reason && lead.reason && (
