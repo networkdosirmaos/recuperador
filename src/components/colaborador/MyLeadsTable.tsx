@@ -231,7 +231,7 @@ export function MyLeadsTable({ leads, onStatusChange, heatSettings, operatorConf
         isOpen={selectedLead !== null} 
         onClose={() => setSelectedLead(null)} 
         lead={selectedLead} 
-        viewType="collaborator" 
+        viewType="colaborador" 
       />
     </>
   )
