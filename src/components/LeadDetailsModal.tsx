@@ -1,214 +1,273 @@
-import { X, CreditCard, QrCode, FileText, Info, AlertTriangle, ShieldCheck, Clock } from 'lucide-react'
-import { getDynamicHeat, getHeatBadgeStyle } from '@/utils/heatCalculator'
+import { X, CreditCard, Activity, User, Mail, Phone, ShoppingBag, Calendar, AlertCircle } from 'lucide-react'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { useQuery } from '@tanstack/react-query'
+import { adminService } from '@/services/admin.service'
+import { useState } from 'react'
 
-type LeadModalProps = {
+type LeadDetailsModalProps = {
   isOpen: boolean
   onClose: () => void
-  lead: any // Tipagem genérica para englobar as 13 colunas
-  viewType: 'admin' | 'collaborator'
+  lead: any
+  viewType?: 'admin' | 'colaborador'
 }
 
-export function LeadDetailsModal({ isOpen, onClose, lead, viewType }: LeadModalProps) {
+export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborador' }: LeadDetailsModalProps) {
+  const [activeTab, setActiveTab] = useState<'details' | 'timeline'>('details')
+  const [expandedEvent, setExpandedEvent] = useState<string | null>(null)
+
+  const { data: events = [], isLoading: loadingEvents } = useQuery({
+    queryKey: ['lead_events', lead?.id],
+    queryFn: () => adminService.getLeadEvents(lead?.id),
+    enabled: isOpen && !!lead?.id
+  })
+
   if (!isOpen || !lead) return null
 
-  // Helpers visuais
-  const getPaymentIcon = (method: string) => {
-    switch (method?.toLowerCase()) {
-      case 'pix': return <QrCode className="w-5 h-5 text-emerald-600" />
-      case 'credit_card': return <CreditCard className="w-5 h-5 text-blue-600" />
-      case 'boleto': return <FileText className="w-5 h-5 text-gray-600" />
-      default: return <Info className="w-5 h-5 text-gray-400" />
-    }
+  // Mapeamento de Cores para o Status do Gateway
+  const getStatusColor = (status: string) => {
+    const s = (status || '').toLowerCase()
+    if (s.includes('paid') || s.includes('approved')) return 'text-emerald-700 bg-emerald-50 border-emerald-200'
+    if (s.includes('waiting') || s.includes('pending')) return 'text-yellow-700 bg-yellow-50 border-yellow-200'
+    if (s.includes('refused') || s.includes('failed') || s.includes('abandonment')) return 'text-red-700 bg-red-50 border-red-200'
+    if (s.includes('refund') || s.includes('chargeback')) return 'text-orange-700 bg-orange-50 border-orange-200'
+    return 'text-gray-700 bg-gray-50 border-gray-200'
   }
 
-  const formatPaymentName = (method: string) => {
-    switch (method?.toLowerCase()) {
-      case 'pix': return 'PIX'
-      case 'credit_card': return 'Cartão de Crédito'
-      case 'boleto': return 'Boleto Bancário'
-      default: return method || 'Não informado'
-    }
+  let heatLabel = 'Frio'
+  let heatColor = 'bg-blue-100 text-blue-800 border-blue-200'
+
+  if (lead.temperature === 'super_quente') {
+    heatLabel = '🔥 Super Quente'
+    heatColor = 'bg-red-100 text-red-800 border-red-200 shadow-[0_0_8px_rgba(239,68,68,0.4)]'
+  } else if (lead.temperature === 'quente') {
+    heatLabel = '🔥 Quente'
+    heatColor = 'bg-orange-100 text-orange-800 border-orange-200'
+  } else if (lead.temperature === 'morno') {
+    heatLabel = '☀️ Morno'
+    heatColor = 'bg-yellow-100 text-yellow-800 border-yellow-200'
   }
 
-  // --- VISÃO COLABORADOR (FOCO EM VENDAS) ---
-  if (viewType === 'collaborator') {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-        <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-          <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white">
-            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-indigo-600" />
-              Ficha de Inteligência
-            </h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          
-          <div className="p-6 space-y-6">
-            <div>
-              <p className="text-sm text-gray-500 uppercase tracking-wider font-semibold mb-1">Cliente</p>
-              <p className="text-xl font-bold text-gray-900">{lead.name}</p>
-              <p className="text-gray-600">{lead.phone || 'Telefone não informado'}</p>
-            </div>
+  const isTest = lead.name?.includes('TESTE')
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Produto</p>
-                <p className="font-medium text-gray-900">{lead.product_name || lead.product || 'N/A'}</p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Pagamento</p>
-                <div className="flex items-center gap-2 font-medium text-gray-900">
-                  {getPaymentIcon(lead.payment_method)}
-                  {formatPaymentName(lead.payment_method)}
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
-              <h3 className="text-sm font-bold text-indigo-900 flex items-center gap-2 mb-2">
-                <AlertTriangle className="w-4 h-4 text-indigo-600" />
-                Dica de Abordagem
-              </h3>
-              <p className="text-sm text-indigo-800 leading-relaxed">
-                {lead.payment_method === 'pix' 
-                  ? 'O cliente tentou pagar via PIX, mas o pagamento não foi concluído. Ofereça ajuda para finalizar ou pergunte se o limite do banco bloqueou.'
-                  : lead.payment_method === 'credit_card'
-                  ? 'Compra no cartão falhou. Muitas vezes é bloqueio antifraude do banco. Sugira tentar outro cartão ou mudar para PIX.'
-                  : lead.payment_method === 'boleto'
-                  ? 'Boleto gerado! Chame para lembrar do vencimento e oferte uma condição especial (ou brinde) se ele pagar no PIX hoje.'
-                  : 'Aborde o cliente perguntando se ele teve alguma dificuldade técnica na hora de finalizar o pedido do produto.'}
-              </p>
-              {lead.reason && (
-                <div className="mt-3 p-2 bg-white rounded-lg border border-indigo-50 text-xs text-gray-600">
-                  <span className="font-semibold text-gray-900">Motivo técnico (Cakto):</span> {lead.reason}
-                </div>
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div 
+        className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Cabeçalho do Modal */}
+        <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between bg-gray-50/50">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <h2 className="text-xl font-bold text-gray-900 truncate pr-4">{lead.name}</h2>
+              {isTest && (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 border border-purple-200">
+                  Teste Integrado
+                </span>
               )}
             </div>
+            <p className="text-sm text-gray-500 font-medium">Ficha de Auditoria Avançada</p>
           </div>
-          
-          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">
-            <button onClick={onClose} className="px-6 py-2 bg-gray-200 text-gray-800 font-medium rounded-lg hover:bg-gray-300">
-              Fechar Ficha
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // --- VISÃO ADMIN (FOCO EM AUDITORIA) ---
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-        
-        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-900 text-white">
-          <h2 className="text-lg font-bold flex items-center gap-2">
-            <Info className="w-5 h-5 text-gray-300" />
-            Auditoria Avançada (Ficha Técnica)
-          </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white p-1 rounded-lg">
+          <button 
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
-        
-        <div className="p-6 overflow-y-auto space-y-8 flex-1">
-          {/* Seção 1: Cliente e Produto */}
-          <section>
-            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 border-b pb-2">1. Dados Básicos</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Nome Completo</p>
-                <p className="font-medium text-gray-900">{lead.name}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">E-mail</p>
-                <p className="font-medium text-gray-900">{lead.email || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Telefone</p>
-                <p className="font-medium text-gray-900">{lead.phone || 'N/A'}</p>
-              </div>
-              <div className="md:col-span-2">
-                <p className="text-xs text-gray-500 mb-1">Produto (Origem)</p>
-                <p className="font-medium text-gray-900">{lead.product_name || lead.product || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">ID Cliente (Cakto)</p>
-                <p className="font-mono text-xs text-gray-600 bg-gray-100 p-1 rounded">{lead.customer_id || 'Não mapeado'}</p>
-              </div>
-            </div>
-          </section>
 
-          {/* Seção 2: Transação e Status */}
-          <section>
-            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 border-b pb-2">2. Dados de Transação</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                <p className="text-xs text-gray-500 mb-1">Método de Pgto</p>
-                <div className="flex items-center gap-2 font-bold text-gray-900">
-                  {getPaymentIcon(lead.payment_method)}
-                  {formatPaymentName(lead.payment_method)}
+        {/* Abas */}
+        <div className="flex px-6 border-b border-gray-100 bg-white">
+          <button 
+            className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'details' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+            onClick={() => setActiveTab('details')}
+          >
+            Detalhes do Cliente
+          </button>
+          <button 
+            className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'timeline' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+            onClick={() => setActiveTab('timeline')}
+          >
+            Linha do Tempo
+            {events.length > 0 && (
+              <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'timeline' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'}`}>
+                {events.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Corpo Rolável */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-white">
+          
+          {activeTab === 'details' ? (
+            <>
+              {/* STATUS CARDS */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    <Activity className="w-4 h-4" />
+                    Temperatura
+                  </div>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${heatColor}`}>
+                    {heatLabel}
+                  </span>
+                </div>
+                <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    <CreditCard className="w-4 h-4" />
+                    Status no Gateway
+                  </div>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(lead.gateway_status)}`}>
+                    {lead.gateway_status || 'DESCONHECIDO'}
+                  </span>
                 </div>
               </div>
-              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                <p className="text-xs text-gray-500 mb-1">Status Original ({lead.gateway || 'Gateway'})</p>
-                <p className="font-mono text-xs text-indigo-600 font-bold">{lead.gateway_status || 'N/A'}</p>
-              </div>
-              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                <p className="text-xs text-gray-500 mb-1">Evento Webhook ({lead.gateway || 'Gateway'})</p>
-                <p className="font-mono text-xs text-indigo-600 font-bold">{lead.gateway_event || 'N/A'}</p>
-              </div>
-              <div className="md:col-span-3 bg-red-50 p-3 rounded-lg border border-red-100">
-                <p className="text-xs text-red-500 font-bold mb-1">Motivo de Falha / Erro (Reason)</p>
-                <p className="text-sm text-red-900">{lead.reason || 'Nenhum erro reportado pelo gateway.'}</p>
-              </div>
-            </div>
-          </section>
 
-          {/* Seção 3: Reembolsos e Chargebacks */}
-          <section>
-            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 border-b pb-2">3. Cancelamentos e Estornos</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Data Reembolso</p>
-                <p className="font-medium text-gray-900">{lead.refunded_at ? new Date(lead.refunded_at).toLocaleString() : '-'}</p>
+              {/* DADOS DO CLIENTE */}
+              <div className="bg-white border border-gray-100 shadow-sm rounded-xl overflow-hidden">
+                <div className="bg-gray-50/50 px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+                  <User className="w-4 h-4 text-gray-500" />
+                  <h3 className="text-sm font-semibold text-gray-900">Informações de Contato</h3>
+                </div>
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
+                  <div>
+                    <span className="block text-xs font-medium text-gray-500 mb-1">E-mail</span>
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm font-medium text-gray-900 break-all">{lead.email || 'Não informado'}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-medium text-gray-500 mb-1">WhatsApp</span>
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm font-medium text-gray-900">{lead.phone || 'Não informado'}</span>
+                    </div>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <span className="block text-xs font-medium text-gray-500 mb-1">Documento (ID)</span>
+                    <span className="text-sm text-gray-700 font-mono bg-gray-50 px-2 py-1 rounded inline-block">{lead.customer_id || 'Não rastreado'}</span>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Data Chargeback</p>
-                <p className="font-medium text-gray-900">{lead.chargedback_at ? new Date(lead.chargedback_at).toLocaleString() : '-'}</p>
-              </div>
-              <div className="md:col-span-3">
-                <p className="text-xs text-gray-500 mb-1">Motivo do Reembolso (Refund Reason)</p>
-                <p className="font-medium text-gray-900 bg-gray-50 p-2 rounded border border-gray-100">{lead.refund_reason || 'Nenhum reembolso solicitado.'}</p>
-              </div>
-            </div>
-          </section>
 
-          {/* Seção 4: Timestamps */}
-          <section>
-            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 border-b pb-2">4. Log de Sistema (CRM)</h3>
-            <div className="flex gap-8 text-sm">
-              <div className="flex items-center gap-2 text-gray-600">
-                <Clock className="w-4 h-4" />
-                <span className="text-gray-500">Entrada CRM:</span>
-                <span className="font-medium text-gray-900">{new Date(lead.created_at).toLocaleString()}</span>
+              {/* DADOS DO PRODUTO & COMPRA */}
+              <div className="bg-white border border-gray-100 shadow-sm rounded-xl overflow-hidden">
+                <div className="bg-gray-50/50 px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+                  <ShoppingBag className="w-4 h-4 text-gray-500" />
+                  <h3 className="text-sm font-semibold text-gray-900">Detalhes da Transação</h3>
+                </div>
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
+                  <div className="sm:col-span-2">
+                    <span className="block text-xs font-medium text-gray-500 mb-1">Produto Ofertado</span>
+                    <span className="text-sm font-medium text-gray-900">{lead.product_name}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-medium text-gray-500 mb-1">Forma de Pagamento</span>
+                    <span className="text-sm font-medium text-gray-900 uppercase">{lead.payment_method || 'Não identificada'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-medium text-gray-500 mb-1">Última Atualização (Gateway)</span>
+                    <div className="flex items-center gap-1.5 text-sm text-gray-900">
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                      {lead.gateway_updated_at ? format(new Date(lead.gateway_updated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : '-'}
+                    </div>
+                  </div>
+                  
+                  {lead.gateway_event && (
+                    <div className="sm:col-span-2">
+                      <span className="block text-xs font-medium text-gray-500 mb-1">Último Evento Disparado</span>
+                      <span className="text-sm text-gray-700 font-mono bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-1 rounded inline-block">
+                        {lead.gateway_event}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-gray-600">
-                <Clock className="w-4 h-4" />
-                <span className="text-gray-500">Última Atualização ({lead.gateway || 'Gateway'}):</span>
-                <span className="font-medium text-gray-900">{lead.gateway_updated_at ? new Date(lead.gateway_updated_at).toLocaleString() : 'N/A'}</span>
-              </div>
-            </div>
-          </section>
 
-        </div>
-        
-        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">
-          <button onClick={onClose} className="px-6 py-2.5 bg-gray-900 text-white font-medium rounded-lg hover:bg-black">
-            Fechar Auditoria
-          </button>
+              {/* CAIXA DE MOTIVO / LOG (Apenas se existir) */}
+              {(lead.reason || lead.refund_reason) && (
+                <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-red-800 uppercase tracking-wider mb-2">
+                    <AlertCircle className="w-4 h-4" />
+                    Motivo de Falha / Erro (Reason)
+                  </div>
+                  <p className="text-sm text-red-900 font-mono break-all whitespace-pre-wrap leading-relaxed bg-white/60 p-3 rounded-lg border border-red-100">
+                    {lead.refund_reason || lead.reason}
+                  </p>
+                </div>
+              )}
+            </>
+          ) : (
+            /* CONTEÚDO DA LINHA DO TEMPO */
+            <div className="relative border-l-2 border-indigo-100 ml-4 space-y-8 pb-4">
+              {loadingEvents ? (
+                <div className="pl-6 text-sm text-gray-500 flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+                  Buscando histórico...
+                </div>
+              ) : events.length === 0 ? (
+                <div className="pl-6 text-sm text-gray-500">Nenhum evento registrado no histórico para este cliente.</div>
+              ) : (
+                events.map((ev: any, index: number) => {
+                  const isExpanded = expandedEvent === ev.id;
+                  
+                  return (
+                    <div key={ev.id} className="relative pl-6 transition-all duration-200">
+                      {/* Bolinha na linha do tempo */}
+                      <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-white ${index === 0 ? 'bg-indigo-600 shadow-[0_0_0_3px_rgba(79,70,229,0.2)]' : 'bg-gray-300'}`}></div>
+                      
+                      <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden hover:border-indigo-200 transition-colors">
+                        <div 
+                          className="p-4 cursor-pointer flex items-start justify-between gap-4"
+                          onClick={() => setExpandedEvent(isExpanded ? null : ev.id)}
+                        >
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${getStatusColor(ev.gateway_status)}`}>
+                                {ev.gateway_status || 'UNKNOWN'}
+                              </span>
+                              <span className="text-sm font-semibold text-gray-900">{ev.gateway_event}</span>
+                            </div>
+                            <div className="text-xs text-gray-500 flex items-center gap-1.5 mt-1.5">
+                              <Calendar className="w-3.5 h-3.5" />
+                              {format(new Date(ev.created_at), "dd 'de' MMM, yyyy 'às' HH:mm", { locale: ptBR })}
+                            </div>
+                          </div>
+                          
+                          <div className="text-gray-400">
+                            {isExpanded ? <span className="text-xs font-medium">Recolher</span> : <span className="text-xs font-medium">Detalhes</span>}
+                          </div>
+                        </div>
+
+                        {isExpanded && (
+                          <div className="bg-gray-50 p-4 border-t border-gray-100 text-xs">
+                            {ev.reason && (
+                              <div className="mb-4">
+                                <span className="block font-semibold text-gray-700 mb-1 uppercase tracking-wider">Motivo / Log:</span>
+                                <div className="text-red-700 font-mono bg-red-50 p-2 rounded border border-red-100 break-words whitespace-pre-wrap">
+                                  {ev.reason}
+                                </div>
+                              </div>
+                            )}
+                            <div>
+                              <span className="block font-semibold text-gray-700 mb-1 uppercase tracking-wider">Payload Bruto (JSON):</span>
+                              <pre className="text-gray-600 font-mono bg-white p-3 rounded border border-gray-200 overflow-x-auto whitespace-pre-wrap text-[10px] leading-relaxed max-h-48 overflow-y-auto">
+                                {JSON.stringify(ev.metadata, null, 2)}
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          )}
+
         </div>
       </div>
     </div>

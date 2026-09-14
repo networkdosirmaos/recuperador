@@ -58,41 +58,96 @@ export async function POST(req: Request) {
         .eq('id', assignedSellerId)
     }
 
-    // Vamos registrar ATÉ OS TESTES como um lead no seu CRM para podermos inspecionar o Payload.
     const isPing = event === 'ping' || event === 'test_webhook' || (!nome && !email && !phone)
 
-    const leadData = {
-      name: isPing ? '🛠️ TESTE CAKTO (Webhook)' : (nome || 'Sem Nome'),
-      phone: phone,
-      email: email,
-      customer_id: payloadData.customerId || customerObj.id || null,
-      product_name: produto,
-      gateway: 'cakto',
-      gateway_updated_at: updatedAt,
-      refunded_at: payloadData.refundedAt || null,
-      chargedback_at: payloadData.chargedbackAt || null,
-      refund_reason: payloadData.refundReason || payloadData.refund_reason || null,
-      payment_method: paymentMethod,
-      reason: isPing ? 'Webhook de Teste/Ping recebido com sucesso' : refusalReason,
-      gateway_status: gatewayStatus,
+    // 1. DEDUPLICAÇÃO (Buscar se o Lead já existe)
+    let existingLead = null
+    if (payloadData.customerId || email || phone) {
+      const orConditions = []
+      if (payloadData.customerId) orConditions.push(`customer_id.eq.${payloadData.customerId}`)
+      if (email) orConditions.push(`email.eq.${email}`)
+      if (phone) orConditions.push(`phone.eq.${phone}`)
+
+      if (orConditions.length > 0) {
+        const { data: foundLeads } = await supabaseAdmin
+          .from('leads')
+          .select('id, current_assignee_id')
+          .or(orConditions.join(','))
+          .limit(1)
+        
+        if (foundLeads && foundLeads.length > 0) {
+          existingLead = foundLeads[0]
+        }
+      }
+    }
+
+    let finalLeadId = null
+
+    if (existingLead) {
+      // 2A. ATUALIZAR (Upsert)
+      const { data: updated, error: updateError } = await supabaseAdmin
+        .from('leads')
+        .update({
+          gateway_updated_at: updatedAt,
+          gateway_status: gatewayStatus,
+          gateway_event: event,
+          gateway_metadata: body,
+          reason: isPing ? 'Webhook recebido (Update)' : refusalReason,
+          temperature: (gatewayStatus === 'waiting_payment' || gatewayStatus === 'pending' || event.includes('abandonment')) ? 'quente' : 'frio',
+          // Atualizamos campos opcionais caso venham mais completos no segundo webhook
+          name: nome || undefined,
+          product_name: produto !== 'Produto Não Informado' ? produto : undefined
+        })
+        .eq('id', existingLead.id)
+        .select('id')
+        .single()
+      
+      if (updateError) throw updateError
+      finalLeadId = updated.id
+    } else {
+      // 2B. INSERIR NOVO (O lead não existia)
+      const leadData = {
+        name: isPing ? '🛠️ TESTE CAKTO (Webhook)' : (nome || 'Sem Nome'),
+        phone: phone,
+        email: email,
+        customer_id: payloadData.customerId || customerObj.id || null,
+        product_name: produto,
+        gateway: 'cakto',
+        gateway_updated_at: updatedAt,
+        refunded_at: payloadData.refundedAt || null,
+        chargedback_at: payloadData.chargedbackAt || null,
+        refund_reason: payloadData.refundReason || payloadData.refund_reason || null,
+        payment_method: paymentMethod,
+        reason: isPing ? 'Webhook de Teste/Ping recebido com sucesso' : refusalReason,
+        gateway_status: gatewayStatus,
+        gateway_event: event,
+        gateway_metadata: body,
+        list_id: listId,
+        status: 'novo', 
+        temperature: (gatewayStatus === 'waiting_payment' || gatewayStatus === 'pending' || event.includes('abandonment')) ? 'quente' : 'frio',
+        current_assignee_id: assignedSellerId 
+      }
+
+      const { data: inserted, error: insertError } = await supabaseAdmin
+        .from('leads')
+        .insert(leadData)
+        .select('id')
+        .single()
+
+      if (insertError) throw insertError
+      finalLeadId = inserted.id
+    }
+
+    // 3. REGISTRAR O HISTÓRICO (Timeline)
+    await supabaseAdmin.from('lead_events').insert({
+      lead_id: finalLeadId,
       gateway_event: event,
-      gateway_metadata: body,
-      list_id: listId,
-      status: 'novo', 
-      temperature: (gatewayStatus === 'waiting_payment' || gatewayStatus === 'pending' || event.includes('abandonment')) ? 'quente' : 'frio',
-      current_assignee_id: assignedSellerId 
-    }
+      gateway_status: gatewayStatus,
+      reason: isPing ? 'Webhook de Teste' : refusalReason,
+      metadata: body
+    })
 
-    const { error } = await supabaseAdmin
-      .from('leads')
-      .insert(leadData)
-
-    if (error) {
-      console.error('Erro de BD no Webhook:', error)
-      return NextResponse.json({ error: 'Erro ao salvar no banco', details: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true, message: 'Lead processado com sucesso' })
+    return NextResponse.json({ success: true, lead_id: finalLeadId, message: 'Lead processado com sucesso' })
 
   } catch (error: any) {
     console.error('Erro crítico no Webhook:', error)

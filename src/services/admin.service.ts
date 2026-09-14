@@ -68,5 +68,16 @@ export const adminService = {
       .in('id', leadIds)
     
     if (error) throw error
+  },
+
+  async getLeadEvents(leadId: string) {
+    const { data, error } = await supabase
+      .from('lead_events')
+      .select('*')
+      .eq('lead_id', leadId)
+      .order('created_at', { ascending: false })
+      
+    if (error) throw error
+    return data || []
   }
 }
