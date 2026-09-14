@@ -59,5 +59,14 @@ export const adminService = {
       .eq('id', leadId)
     
     if (error) throw error
+  },
+
+  async deleteLeads(leadIds: string[]) {
+    const { error } = await supabase
+      .from('leads')
+      .delete()
+      .in('id', leadIds)
+    
+    if (error) throw error
   }
 }

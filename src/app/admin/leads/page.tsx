@@ -3,7 +3,7 @@
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Users, Search, Filter, Loader2, Info, CreditCard, QrCode, FileText } from 'lucide-react'
+import { Users, Search, Filter, Loader2, Info, CreditCard, QrCode, FileText, Trash2 } from 'lucide-react'
 import { LeadDetailsModal } from '@/components/LeadDetailsModal'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -75,6 +75,43 @@ function BaseDeLeadsContent() {
       alert('Erro ao transferir lead.')
     }
   })
+
+  // === EXCLUSÃO EM MASSA ===
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([])
+
+  const deleteLeadsMutation = useMutation({
+    mutationFn: (leadIds: string[]) => adminService.deleteLeads(leadIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin_leads'] })
+      setSelectedLeads([])
+      alert('Leads excluídos com sucesso!')
+    },
+    onError: (err) => {
+      console.error(err)
+      alert('Erro ao excluir leads.')
+    }
+  })
+
+  const toggleSelectAll = () => {
+    if (selectedLeads.length === leads.length && leads.length > 0) {
+      setSelectedLeads([])
+    } else {
+      setSelectedLeads(leads.map((l: any) => l.id))
+    }
+  }
+
+  const toggleSelectLead = (id: string) => {
+    setSelectedLeads(prev => 
+      prev.includes(id) ? prev.filter(leadId => leadId !== id) : [...prev, id]
+    )
+  }
+
+  const handleDeleteSelected = () => {
+    if (window.confirm(`Tem certeza que deseja APAGAR PERMANENTEMENTE ${selectedLeads.length} leads?`)) {
+      deleteLeadsMutation.mutate(selectedLeads)
+    }
+  }
+  // ==========================
 
   const handleTransfer = () => {
     if (!transferModal.leadId) return
@@ -223,6 +260,26 @@ function BaseDeLeadsContent() {
         </div>
       </div>
 
+      {/* BARRA DE AÇÃO EM MASSA */}
+      {selectedLeads.length > 0 && (
+        <div className="bg-red-50 border border-red-100 rounded-xl p-4 flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-bottom-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-red-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shadow-sm">
+              {selectedLeads.length}
+            </div>
+            <span className="text-red-900 font-medium">leads selecionados para exclusão</span>
+          </div>
+          <button 
+            onClick={handleDeleteSelected}
+            disabled={deleteLeadsMutation.isPending}
+            className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors shadow-sm"
+          >
+            {deleteLeadsMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+            Apagar Definitivamente
+          </button>
+        </div>
+      )}
+
       {/* TABELA DE RESULTADOS */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden overflow-x-auto">
         {searching && leads.length === 0 ? (
@@ -232,6 +289,14 @@ function BaseDeLeadsContent() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  <th className="p-4 w-12">
+                    <input 
+                      type="checkbox" 
+                      className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      checked={leads.length > 0 && selectedLeads.length === leads.length}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
                   <th className="p-4">Cliente</th>
                   <th className="p-4">Produto</th>
                   {showColumns.origin && <th className="p-4">Origem</th>}
@@ -246,8 +311,16 @@ function BaseDeLeadsContent() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {leads.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
+                {leads.map((lead: any) => (
+                  <tr key={lead.id} className={`transition-colors ${selectedLeads.includes(lead.id) ? 'bg-indigo-50/50' : 'hover:bg-gray-50'}`}>
+                    <td className="p-4">
+                      <input 
+                        type="checkbox" 
+                        className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        checked={selectedLeads.includes(lead.id)}
+                        onChange={() => toggleSelectLead(lead.id)}
+                      />
+                    </td>
                     <td className="p-4">
                       <div className="font-medium text-gray-900">{lead.name}</div>
                       <div className="text-xs text-gray-500">{lead.email || lead.phone || 'Sem contato'}</div>
