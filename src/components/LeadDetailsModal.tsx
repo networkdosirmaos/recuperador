@@ -340,11 +340,13 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
                               </td>
                               <td className="px-4 py-3 text-center">
                                 {!m.jsonVal ? (
-                                  <span className="text-[10px] text-gray-400 font-medium bg-gray-100 px-2 py-0.5 rounded-full">N/A</span>
+                                  <span className="text-[10px] text-gray-400 font-medium bg-gray-100 px-2 py-0.5 rounded-full" title="Não veio no JSON">N/A</span>
                                 ) : !isMissing ? (
                                   <CheckCircle2 className="w-5 h-5 text-emerald-500 mx-auto" />
                                 ) : (
-                                  <AlertCircle className="w-5 h-5 text-orange-500 mx-auto" title="Dado no JSON ignorado ou não capturado" />
+                                  <span title="Dado no JSON ignorado ou não capturado" className="block cursor-help">
+                                    <AlertCircle className="w-5 h-5 text-orange-500 mx-auto" />
+                                  </span>
                                 )}
                               </td>
                             </tr>
