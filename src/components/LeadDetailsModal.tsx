@@ -49,11 +49,12 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
   }
 
   const isTest = lead.name?.includes('TESTE')
+  const modalMaxWidth = activeTab === 'debug' ? 'max-w-6xl' : 'max-w-2xl'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div 
-        className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        className={`bg-white rounded-2xl w-full ${modalMaxWidth} max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 transition-all duration-300 ease-out`}
         onClick={e => e.stopPropagation()}
       >
         {/* Cabeçalho do Modal */}
@@ -261,7 +262,7 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
                             )}
                             <div>
                               <span className="block font-semibold text-gray-700 mb-1 uppercase tracking-wider">Payload Bruto (JSON):</span>
-                              <pre className="text-gray-600 font-mono bg-white p-3 rounded border border-gray-200 overflow-x-auto whitespace-pre-wrap text-[10px] leading-relaxed max-h-48 overflow-y-auto">
+                              <pre className="text-gray-600 font-mono bg-white p-3 rounded border border-gray-200 overflow-x-auto whitespace-pre text-[10px] leading-relaxed max-h-48 overflow-y-auto">
                                 {JSON.stringify(ev.metadata, null, 2)}
                               </pre>
                             </div>
@@ -288,8 +289,8 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
                     <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
                   </div>
                 </div>
-                <div className="p-4 overflow-y-auto flex-1 max-h-[500px]">
-                  <pre className="text-green-400 font-mono text-[11px] leading-relaxed break-all whitespace-pre-wrap">
+                <div className="p-4 overflow-auto flex-1 max-h-[500px]">
+                  <pre className="text-green-400 font-mono text-[11px] leading-relaxed whitespace-pre">
                     {JSON.stringify(lead.gateway_metadata, null, 2)}
                   </pre>
                 </div>
