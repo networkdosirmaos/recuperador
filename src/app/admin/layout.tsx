@@ -24,6 +24,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   const menuItems = [
     { name: 'Visão Geral', href: '/admin/dashboard', icon: LayoutDashboard },
+    { name: 'Base de Leads', href: '/admin/leads', icon: Users },
     { name: 'Upload de Leads', href: '/admin/upload', icon: UploadCloud },
     { name: 'Integrações', href: '/admin/integracoes', icon: Webhook },
     { name: 'Equipe', href: '/admin/equipe', icon: Users },

@@ -75,12 +75,28 @@ export default function IntegracoesPage() {
   }
 
   const handleCopyUrl = (listId: string) => {
-    // Usamos o window.location.origin para pegar o domínio atual (ex: leaddopapai.vercel.app)
     const url = `${window.location.origin}/api/webhooks/cakto?list_id=${listId}`
     navigator.clipboard.writeText(url)
     
     setCopiedId(listId)
     setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  const handleDelete = async (listId: string) => {
+    if (!confirm('Tem certeza que deseja deletar essa integração? Todos os leads capturados por ela continuarão no banco de dados, mas o link parará de funcionar.')) return
+    
+    try {
+      const { error } = await supabase
+        .from('lead_lists')
+        .delete()
+        .eq('id', listId)
+        
+      if (error) throw error
+      await fetchIntegrations()
+    } catch (error) {
+      console.error('Erro ao deletar:', error)
+      alert('Falha ao deletar a integração.')
+    }
   }
 
   const getGatewayBadge = (type: string) => {
@@ -170,7 +186,16 @@ export default function IntegracoesPage() {
                         Criada em {new Date(integration.imported_at).toLocaleDateString('pt-BR')}
                       </p>
                     </div>
-                    {getGatewayBadge(integration.type)}
+                    <div className="flex items-center gap-3">
+                      {getGatewayBadge(integration.type)}
+                      <button 
+                        onClick={() => handleDelete(integration.id)}
+                        className="text-gray-400 hover:text-red-600 transition-colors"
+                        title="Deletar integração"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
                   
                   {/* Estatísticas */}

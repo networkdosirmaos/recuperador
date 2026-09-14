@@ -40,25 +40,32 @@ export default function AdminDashboard() {
         // Fetch Recent Leads
         // Assuming products and profiles tables are joined for nice names
         // If the relationships are slightly different, this might need adjusting, but it's safe to start with.
-        const { data: leads } = await supabase
+        const { data: leads, error: leadsError } = await supabase
           .from('leads')
           .select(`
             id,
             name,
             status,
             updated_at,
-            profiles!leads_current_assignee_id_fkey(name)
+            product_name,
+            profiles (
+              full_name
+            )
           `)
           .order('created_at', { ascending: false })
           .limit(10)
+
+        if (leadsError) {
+           console.error('Erro ao buscar últimos leads:', leadsError)
+        }
 
         if (leads) {
           const formattedLeads = leads.map(l => ({
             id: l.id,
             name: l.name,
-            product: 'N/A', // Produto mockado temporariamente
+            product: l.product_name || 'N/A', 
             status: l.status,
-            assigned_to: l.profiles ? (l.profiles as any).name : null,
+            assigned_to: l.profiles ? (l.profiles as any).full_name : null,
             updated_at: l.updated_at
           }))
           setRecentLeads(formattedLeads)
