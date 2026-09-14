@@ -265,6 +265,8 @@ function BaseDeLeadsContent() {
         lead={selectedLead} 
         viewType="admin" 
       />
+    </div>
+  )
 }
 
 export default function BaseDeLeadsPage() {
