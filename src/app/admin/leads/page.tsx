@@ -6,20 +6,26 @@ import { supabase } from '@/lib/supabase'
 import { Users, Search, Filter, Loader2, Info, CreditCard, QrCode, FileText } from 'lucide-react'
 import { LeadDetailsModal } from '@/components/LeadDetailsModal'
 
+import { useQuery } from '@tanstack/react-query'
+import { adminService } from '@/services/admin.service'
+
 function BaseDeLeadsContent() {
   const searchParams = useSearchParams()
   const initialListId = searchParams.get('listId') || 'all'
 
-  const [leads, setLeads] = useState<any[]>([])
-  const [lists, setLists] = useState<any[]>([])
   const [selectedLead, setSelectedLead] = useState<any>(null)
   
-  const [loading, setLoading] = useState(true)
-  const [searching, setSearching] = useState(false)
-  
+  // Filtros Visuais (Inputs)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedList, setSelectedList] = useState(initialListId)
   const [selectedStatus, setSelectedStatus] = useState('all')
+
+  // Filtros Aplicados (Os que ativam a busca)
+  const [activeFilters, setActiveFilters] = useState({
+    listId: initialListId,
+    status: 'all',
+    searchTerm: ''
+  })
 
   // Admin Column Toggles
   const [showColumns, setShowColumns] = useState({
@@ -31,71 +37,27 @@ function BaseDeLeadsContent() {
     updated_at: false
   });
 
-  useEffect(() => {
-    fetchInitialData()
-  }, [])
+  // Queries
+  const { data: lists = [], isLoading: loadingLists } = useQuery({
+    queryKey: ['admin_lead_lists'],
+    queryFn: adminService.getLeadLists
+  })
 
-  const fetchInitialData = async () => {
-    try {
-      setLoading(true)
-      const { data: listsData } = await supabase
-        .from('lead_lists')
-        .select('id, name, type')
-        .order('imported_at', { ascending: false })
-      
-      if (listsData) setLists(listsData)
+  const { data: leads = [], isLoading: isLoadingLeads, isFetching } = useQuery({
+    queryKey: ['admin_leads', activeFilters],
+    queryFn: () => adminService.searchLeads(activeFilters)
+  })
 
-      // Faz a primeira busca manual
-      await executeSearch(undefined, true)
-    } catch (error) {
-      console.error('Erro na inicialização:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const loading = loadingLists || isLoadingLeads;
+  const searching = isFetching;
 
-  const executeSearch = async (e?: React.FormEvent, isInitialLoad = false) => {
+  const executeSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault()
-    
-    try {
-      setSearching(true)
-      
-      let query = supabase
-        .from('leads')
-        .select(`
-          *,
-          profiles (full_name),
-          lead_lists (name, type)
-        `)
-      
-      // Aplicar filtros de Gaveta (Lista) - consideramos initialListId no carregamento inicial
-      const targetList = isInitialLoad ? initialListId : selectedList
-      if (targetList !== 'all') {
-        query = query.eq('list_id', targetList)
-      }
-      
-      // Aplicar filtros de Status
-      if (!isInitialLoad && selectedStatus !== 'all') {
-        query = query.eq('status', selectedStatus)
-      }
-      
-      // Aplicar filtro de Texto (Pesquisa no DB)
-      if (!isInitialLoad && searchTerm.trim()) {
-        query = query.or(`name.ilike.%${searchTerm.trim()}%,email.ilike.%${searchTerm.trim()}%,phone.ilike.%${searchTerm.trim()}%`)
-      }
-
-      // Ordenar por mais recentes primeiro (Limite de segurança de 200 para a tela no explodir)
-      query = query.order('created_at', { ascending: false }).limit(200)
-
-      const { data, error } = await query
-
-      if (error) throw error
-      setLeads(data || [])
-    } catch (error) {
-      console.error('Erro ao buscar leads:', error)
-    } finally {
-      setSearching(false)
-    }
+    setActiveFilters({
+      listId: selectedList,
+      status: selectedStatus,
+      searchTerm: searchTerm
+    })
   }
 
   const getPaymentIcon = (method?: string) => {
