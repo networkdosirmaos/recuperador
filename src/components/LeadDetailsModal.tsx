@@ -308,47 +308,42 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
                   <table className="w-full text-left border-collapse text-sm">
                     <thead className="bg-gray-50 border-b border-gray-100 text-xs uppercase text-gray-500 sticky top-0">
                       <tr>
-                        <th className="px-4 py-3 font-semibold">Chave JSON (Cakto)</th>
-                        <th className="px-4 py-3 font-semibold">Coluna CRM</th>
-                        <th className="px-4 py-3 font-semibold text-center">Status</th>
+                        <th className="px-4 py-3 font-semibold w-1/2">Origem do Dado (Cakto)</th>
+                        <th className="px-4 py-3 font-semibold w-1/2">Salvo no CRM</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {(() => {
-                        const payload = lead.gateway_metadata || {}
-                        const dataObj = payload?.data?.[0] || {}
-                        
+                        const formatDate = (d: string | null) => d ? format(new Date(d), "dd/MM/yyyy HH:mm", { locale: ptBR }) : null
+
                         const mappings = [
-                          { jsonKey: 'data[0].customerName', jsonVal: dataObj.customerName, dbKey: 'Nome', dbVal: lead.name },
-                          { jsonKey: 'data[0].customerEmail', jsonVal: dataObj.customerEmail, dbKey: 'E-mail', dbVal: lead.email },
-                          { jsonKey: 'data[0].customerCellphone', jsonVal: dataObj.customerCellphone, dbKey: 'Telefone', dbVal: lead.phone },
-                          { jsonKey: 'data[0].product.name', jsonVal: dataObj.product?.name, dbKey: 'Produto', dbVal: lead.product_name },
-                          { jsonKey: 'data[0].paymentMethod', jsonVal: dataObj.paymentMethod, dbKey: 'Pagamento', dbVal: lead.payment_method },
-                          { jsonKey: 'event', jsonVal: payload.event, dbKey: 'Evento', dbVal: lead.gateway_event },
+                          { jsonKey: 'data[0].customerName (ou customer.name)', dbKey: 'Nome', dbVal: lead.name },
+                          { jsonKey: 'data[0].customerEmail (ou customer.email)', dbKey: 'E-mail', dbVal: lead.email },
+                          { jsonKey: 'data[0].customerCellphone', dbKey: 'Telefone', dbVal: lead.phone },
+                          { jsonKey: 'data[0].product.name', dbKey: 'Produto', dbVal: lead.product_name },
+                          { jsonKey: 'data[0].paymentMethod', dbKey: 'Pagamento', dbVal: lead.payment_method },
+                          { jsonKey: 'event', dbKey: 'Evento Webhook', dbVal: lead.gateway_event },
+                          { jsonKey: 'status (ou recoveryStatus)', dbKey: 'Status Cakto', dbVal: lead.gateway_status },
+                          { jsonKey: 'data[0].product.id (ou customer.id)', dbKey: 'ID Cliente (Cakto)', dbVal: lead.customer_id },
+                          { jsonKey: 'reason (ou refundReason)', dbKey: 'Motivo Falha/Erro', dbVal: lead.reason || lead.refund_reason },
+                          { jsonKey: 'refundedAt', dbKey: 'Data Estorno', dbVal: formatDate(lead.refunded_at) },
+                          { jsonKey: 'updatedAt (ou paidAt)', dbKey: 'Última Atualização', dbVal: formatDate(lead.gateway_updated_at) },
+                          { jsonKey: '(Lógica Interna CRM)', dbKey: 'Temperatura', dbVal: heatLabel },
                         ]
 
                         return mappings.map((m, i) => {
-                          const isMissing = m.jsonVal && !m.dbVal
-                          
+                          const isEmpty = !m.dbVal || m.dbVal === '-'
+
                           return (
-                            <tr key={i} className={`transition-colors ${isMissing ? 'bg-orange-50/50' : 'hover:bg-gray-50'}`}>
-                              <td className="px-4 py-3 font-mono text-[11px] text-gray-500 break-all w-1/3">
+                            <tr key={i} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-4 py-3 font-mono text-[11px] text-gray-500 break-all">
                                 {m.jsonKey}
                               </td>
-                              <td className="px-4 py-3 w-1/2">
+                              <td className="px-4 py-3">
                                 <div className="font-semibold text-gray-900">{m.dbKey}</div>
-                                <div className="text-xs text-gray-500 truncate max-w-[150px]" title={m.dbVal}>{m.dbVal || 'Vazio'}</div>
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                {!m.jsonVal ? (
-                                  <span className="text-[10px] text-gray-400 font-medium bg-gray-100 px-2 py-0.5 rounded-full" title="Não veio no JSON">N/A</span>
-                                ) : !isMissing ? (
-                                  <CheckCircle2 className="w-5 h-5 text-emerald-500 mx-auto" />
-                                ) : (
-                                  <span title="Dado no JSON ignorado ou não capturado" className="block cursor-help">
-                                    <AlertCircle className="w-5 h-5 text-orange-500 mx-auto" />
-                                  </span>
-                                )}
+                                <div className={`text-xs mt-0.5 truncate max-w-[250px] ${isEmpty ? 'text-gray-400 italic' : 'text-gray-600'}`} title={m.dbVal || ''}>
+                                  {isEmpty ? 'Vazio' : m.dbVal}
+                                </div>
                               </td>
                             </tr>
                           )
