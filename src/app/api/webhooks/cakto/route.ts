@@ -20,23 +20,47 @@ export async function POST(req: Request) {
 
     const event = body.event || 'test'
     // A Cakto envia 'data' como Array em eventos de Abandono, mas pode enviar como Objeto em compras. 
-    // Vamos garantir que pegamos o primeiro item sempre.
-    const payloadData = Array.isArray(body.data) ? body.data[0] : (body.data || body)
+    let mainItem = body.data || body;
+    let orderBumps: any[] = [];
+    let totalAmount = 0;
+
+    if (Array.isArray(body.data) && body.data.length > 0) {
+      // Procura o item principal (offer_type = 'main')
+      const foundMain = body.data.find((item: any) => item.offer_type === 'main');
+      mainItem = foundMain || body.data[0];
+      
+      // Procura order bumps
+      orderBumps = body.data.filter((item: any) => item.offer_type === 'orderbump' && item.id !== mainItem.id);
+      
+      // Calcula o valor total do carrinho
+      body.data.forEach((item: any) => {
+        if (item.amount) totalAmount += parseFloat(item.amount);
+      });
+    } else {
+      if (mainItem.amount) totalAmount = parseFloat(mainItem.amount);
+    }
     
     // As vezes vem dentro do objeto 'customer', as vezes vem na raiz como 'customerName'
-    const customerObj = payloadData.customer || {}
-    const productObj = payloadData.product || {}
+    const customerObj = mainItem.customer || {}
+    const productObj = mainItem.product || {}
 
-    // Normalização Bruta de Dados (Mapeamento infalível)
-    const nome = payloadData.customerName || customerObj.name || payloadData.name || null
-    const email = payloadData.customerEmail || customerObj.email || payloadData.email || null
-    const phone = payloadData.customerCellphone || payloadData.customerPhone || customerObj.phone || customerObj.cellphone || payloadData.phone || null
-    const produto = productObj.name || payloadData.productName || payloadData.offer?.name || 'Produto Não Informado'
+    // Normalização Bruta de Dados (Mapeamento infalível focado no Item Principal)
+    const nome = mainItem.customerName || customerObj.name || mainItem.name || null
+    const email = mainItem.customerEmail || customerObj.email || mainItem.email || null
+    const phone = mainItem.customerCellphone || mainItem.customerPhone || customerObj.phone || customerObj.cellphone || mainItem.phone || null
     
-    const gatewayStatus = payloadData.status || payloadData.recoveryStatus || event
-    const updatedAt = payloadData.updatedAt || payloadData.createdAt || new Date().toISOString()
-    const paymentMethod = payloadData.paymentMethod || payloadData.payment_method || null
-    const refusalReason = payloadData.reason || payloadData.refundReason || null
+    // Montagem do Nome do Produto com ou sem Combo
+    let baseProductName = productObj.name || mainItem.productName || mainItem.offer?.name || 'Produto Não Informado';
+    if (orderBumps.length > 0) {
+      const bumpNames = orderBumps.map(b => b.product?.name || b.offer?.name || 'Item Adicional').join(', ');
+      baseProductName = `${baseProductName} (+ Bump: ${bumpNames})`;
+    }
+    const produto = baseProductName;
+    
+    const gatewayStatus = mainItem.status || mainItem.recoveryStatus || event
+    const updatedAt = mainItem.updatedAt || mainItem.createdAt || new Date().toISOString()
+    const paymentMethod = mainItem.paymentMethod || mainItem.payment_method || null
+    const refusalReason = mainItem.reason || mainItem.refundReason || null
 
     // ROLETA AUTOMÁTICA (ROUND-ROBIN)
     let assignedSellerId = null
@@ -62,9 +86,9 @@ export async function POST(req: Request) {
 
     // 1. DEDUPLICAÇÃO (Buscar se o Lead já existe)
     let existingLead = null
-    if (payloadData.customerId || email || phone) {
+    if (mainItem.customerId || email || phone) {
       const orConditions = []
-      if (payloadData.customerId) orConditions.push(`customer_id.eq.${payloadData.customerId}`)
+      if (mainItem.customerId) orConditions.push(`customer_id.eq.${mainItem.customerId}`)
       if (email) orConditions.push(`email.eq.${email}`)
       if (phone) orConditions.push(`phone.eq.${phone}`)
 
@@ -110,13 +134,13 @@ export async function POST(req: Request) {
         name: isPing ? '🛠️ TESTE CAKTO (Webhook)' : (nome || 'Sem Nome'),
         phone: phone,
         email: email,
-        customer_id: payloadData.customerId || customerObj.id || null,
+        customer_id: mainItem.customerId || customerObj.id || null,
         product_name: produto,
         gateway: 'cakto',
         gateway_updated_at: updatedAt,
-        refunded_at: payloadData.refundedAt || null,
-        chargedback_at: payloadData.chargedbackAt || null,
-        refund_reason: payloadData.refundReason || payloadData.refund_reason || null,
+        refunded_at: mainItem.refundedAt || null,
+        chargedback_at: mainItem.chargedbackAt || null,
+        refund_reason: mainItem.refundReason || mainItem.refund_reason || null,
         payment_method: paymentMethod,
         reason: isPing ? 'Webhook de Teste/Ping recebido com sucesso' : refusalReason,
         gateway_status: gatewayStatus,
