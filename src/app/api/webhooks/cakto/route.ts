@@ -19,33 +19,48 @@ export async function POST(req: Request) {
     }
 
     const event = body.event || 'test'
-    const data = body.data || body 
-    const customer = data.customer || {}
-    const product = data.product || {}
+    // A Cakto envia 'data' como Array em eventos de Abandono, mas pode enviar como Objeto em compras. 
+    // Vamos garantir que pegamos o primeiro item sempre.
+    const payloadData = Array.isArray(body.data) ? body.data[0] : (body.data || body)
+    
+    // As vezes vem dentro do objeto 'customer', as vezes vem na raiz como 'customerName'
+    const customerObj = payloadData.customer || {}
+    const productObj = payloadData.product || {}
+
+    // Normalização Bruta de Dados (Mapeamento infalível)
+    const nome = payloadData.customerName || customerObj.name || payloadData.name || null
+    const email = payloadData.customerEmail || customerObj.email || payloadData.email || null
+    const phone = payloadData.customerCellphone || payloadData.customerPhone || customerObj.phone || customerObj.cellphone || payloadData.phone || null
+    const produto = productObj.name || payloadData.productName || payloadData.offer?.name || 'Produto Não Informado'
+    
+    const gatewayStatus = payloadData.status || payloadData.recoveryStatus || event
+    const updatedAt = payloadData.updatedAt || payloadData.createdAt || new Date().toISOString()
+    const paymentMethod = payloadData.paymentMethod || payloadData.payment_method || null
+    const refusalReason = payloadData.reason || payloadData.refundReason || null
 
     // Vamos registrar ATÉ OS TESTES como um lead no seu CRM para podermos inspecionar o Payload.
-    const isPing = event === 'ping' || event === 'test_webhook' || (!customer.name && !customer.email && !customer.phone)
+    const isPing = event === 'ping' || event === 'test_webhook' || (!nome && !email && !phone)
 
     const leadData = {
-      name: isPing ? '🛠️ TESTE CAKTO (Webhook)' : (customer.name || 'Sem nome'),
-      phone: customer.phone || null,
-      email: customer.email || null,
-      customer_id: customer.id || null,
-      product_name: product.name || 'Produto Teste',
+      name: isPing ? '🛠️ TESTE CAKTO (Webhook)' : (nome || 'Sem Nome'),
+      phone: phone,
+      email: email,
+      customer_id: payloadData.customerId || customerObj.id || null,
+      product_name: produto,
       gateway: 'cakto',
-      gateway_updated_at: data.updatedAt || new Date().toISOString(),
-      refunded_at: data.refundedAt || null,
-      chargedback_at: data.chargedbackAt || null,
-      refund_reason: data.refundReason || data.refund_reason || null,
-      payment_method: data.paymentMethod || null,
+      gateway_updated_at: updatedAt,
+      refunded_at: payloadData.refundedAt || null,
+      chargedback_at: payloadData.chargedbackAt || null,
+      refund_reason: payloadData.refundReason || payloadData.refund_reason || null,
+      payment_method: paymentMethod,
       // Se for teste, gravamos o JSON inteiro da Cakto no campo Reason para debug!
-      reason: isPing ? JSON.stringify(body).substring(0, 900) : (data.reason || null),
-      gateway_status: data.status || null,
+      reason: isPing ? JSON.stringify(body).substring(0, 900) : refusalReason,
+      gateway_status: gatewayStatus,
       gateway_event: event,
       gateway_metadata: body,
       list_id: listId,
       status: 'novo', 
-      temperature: data.status === 'waiting_payment' ? 'quente' : 'frio' 
+      temperature: (gatewayStatus === 'waiting_payment' || gatewayStatus === 'pending' || event.includes('abandonment')) ? 'quente' : 'frio' 
     }
 
     const { error } = await supabaseAdmin
