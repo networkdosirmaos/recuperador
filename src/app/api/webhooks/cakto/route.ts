@@ -23,13 +23,11 @@ export async function POST(req: Request) {
     const customer = data.customer || {}
     const product = data.product || {}
 
-    // Se for apenas um ping de teste da Cakto (sem cliente), podemos retornar 200 logo para validar
-    if (event === 'ping' || event === 'test_webhook' || (!customer.name && !customer.email && !customer.phone)) {
-      return NextResponse.json({ success: true, message: 'Ping recebido com sucesso (Teste validado)' })
-    }
+    // Vamos registrar ATÉ OS TESTES como um lead no seu CRM para podermos inspecionar o Payload.
+    const isPing = event === 'ping' || event === 'test_webhook' || (!customer.name && !customer.email && !customer.phone)
 
     const leadData = {
-      name: customer.name || 'Cliente de Teste',
+      name: isPing ? '🛠️ TESTE CAKTO (Webhook)' : (customer.name || 'Sem nome'),
       phone: customer.phone || null,
       email: customer.email || null,
       customer_id: customer.id || null,
@@ -39,7 +37,8 @@ export async function POST(req: Request) {
       chargedback_at: data.chargedbackAt || null,
       refund_reason: data.refundReason || data.refund_reason || null,
       payment_method: data.paymentMethod || null,
-      reason: data.reason || null,
+      // Se for teste, gravamos o JSON inteiro da Cakto no campo Reason para debug!
+      reason: isPing ? JSON.stringify(body).substring(0, 900) : (data.reason || null),
       cakto_status: data.status || null,
       cakto_event: event,
       list_id: listId,
