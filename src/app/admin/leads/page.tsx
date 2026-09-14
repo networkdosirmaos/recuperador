@@ -1,11 +1,15 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Users, Search, Filter, Loader2, Info, CreditCard, QrCode, FileText } from 'lucide-react'
 import { LeadDetailsModal } from '@/components/LeadDetailsModal'
 
-export default function BaseDeLeadsPage() {
+function BaseDeLeadsContent() {
+  const searchParams = useSearchParams()
+  const initialListId = searchParams.get('listId') || 'all'
+
   const [leads, setLeads] = useState<any[]>([])
   const [lists, setLists] = useState<any[]>([])
   const [selectedLead, setSelectedLead] = useState<any>(null)
@@ -15,7 +19,7 @@ export default function BaseDeLeadsPage() {
   
   // Filtros
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedList, setSelectedList] = useState('all')
+  const [selectedList, setSelectedList] = useState(initialListId)
   const [selectedStatus, setSelectedStatus] = useState('all')
 
   useEffect(() => {
@@ -25,7 +29,6 @@ export default function BaseDeLeadsPage() {
   const fetchInitialData = async () => {
     try {
       setLoading(true)
-      // Buscar listas disponíveis para o filtro
       const { data: listsData } = await supabase
         .from('lead_lists')
         .select('id, name, type')
@@ -33,7 +36,7 @@ export default function BaseDeLeadsPage() {
       
       if (listsData) setLists(listsData)
 
-      // Faz a primeira busca manual (sem parâmetros = todos os leads limitados)
+      // Faz a primeira busca manual
       await executeSearch(undefined, true)
     } catch (error) {
       console.error('Erro na inicialização:', error)
@@ -56,9 +59,10 @@ export default function BaseDeLeadsPage() {
           lead_lists (name, type)
         `)
       
-      // Aplicar filtros de Gaveta (Lista)
-      if (!isInitialLoad && selectedList !== 'all') {
-        query = query.eq('list_id', selectedList)
+      // Aplicar filtros de Gaveta (Lista) - consideramos initialListId no carregamento inicial
+      const targetList = isInitialLoad ? initialListId : selectedList
+      if (targetList !== 'all') {
+        query = query.eq('list_id', targetList)
       }
       
       // Aplicar filtros de Status
@@ -261,6 +265,12 @@ export default function BaseDeLeadsPage() {
         lead={selectedLead} 
         viewType="admin" 
       />
-    </div>
+}
+
+export default function BaseDeLeadsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Carregando CRM...</div>}>
+      <BaseDeLeadsContent />
+    </Suspense>
   )
 }

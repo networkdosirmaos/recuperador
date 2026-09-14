@@ -91,6 +91,19 @@ export default function ColaboradorDashboard() {
               })
             }
           )
+          .on(
+            'postgres_changes',
+            {
+              event: 'DELETE',
+              schema: 'public',
+              table: 'leads'
+            },
+            (payload) => {
+              // Se o admin deletou o lead (em cascata), removemos da tela do vendedor instantaneamente
+              console.log('LEAD DELETADO EM CASCATA!', payload.old)
+              setMyLeads(prev => prev.filter(l => l.id !== payload.old.id))
+            }
+          )
           .subscribe()
 
         return () => {
