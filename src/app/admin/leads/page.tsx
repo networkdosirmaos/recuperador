@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Users, Search, Filter, Loader2 } from 'lucide-react'
+import { Users, Search, Filter, Loader2, Info, CreditCard, QrCode, FileText } from 'lucide-react'
+import { LeadDetailsModal } from '@/components/LeadDetailsModal'
 
 export default function BaseDeLeadsPage() {
   const [leads, setLeads] = useState<any[]>([])
   const [lists, setLists] = useState<any[]>([])
+  const [selectedLead, setSelectedLead] = useState<any>(null)
   
   const [loading, setLoading] = useState(true)
   const [searching, setSearching] = useState(false)
@@ -80,6 +82,15 @@ export default function BaseDeLeadsPage() {
       console.error('Erro ao buscar leads:', error)
     } finally {
       setSearching(false)
+    }
+  }
+
+  const getPaymentIcon = (method?: string) => {
+    switch (method?.toLowerCase()) {
+      case 'pix': return <QrCode className="w-4 h-4 text-emerald-600" />
+      case 'credit_card': return <CreditCard className="w-4 h-4 text-blue-600" />
+      case 'boleto': return <FileText className="w-4 h-4 text-gray-600" />
+      default: return null
     }
   }
 
@@ -183,10 +194,10 @@ export default function BaseDeLeadsPage() {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   <th className="p-4">Cliente</th>
-                  <th className="p-4">Produto / Origem</th>
-                  <th className="p-4">Status CRM</th>
+                  <th className="p-4">Produto & Pgto</th>
+                  <th className="p-4">Status / Evento</th>
                   <th className="p-4">Vendedor Atual</th>
-                  <th className="p-4">Data de Entrada</th>
+                  <th className="p-4">Ação</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -195,6 +206,7 @@ export default function BaseDeLeadsPage() {
                     <td className="p-4">
                       <div className="font-medium text-gray-900">{lead.name}</div>
                       <div className="text-xs text-gray-500">{lead.email || lead.phone || 'Sem contato'}</div>
+                      <div className="text-[10px] text-gray-400 mt-1">{new Date(lead.created_at).toLocaleString('pt-BR')}</div>
                     </td>
                     <td className="p-4">
                       <div className="text-sm font-medium text-gray-900">{lead.product_name || 'N/A'}</div>
@@ -202,17 +214,31 @@ export default function BaseDeLeadsPage() {
                         {lead.lead_lists?.type === 'webhook_cakto' ? '⚡ ' : '📁 '} 
                         {lead.lead_lists?.name || 'Sem lista'}
                       </div>
+                      {lead.payment_method && (
+                        <div className="flex items-center gap-1 mt-1 text-xs text-gray-600 font-semibold uppercase">
+                          {getPaymentIcon(lead.payment_method)} {lead.payment_method === 'credit_card' ? 'Cartão' : lead.payment_method}
+                        </div>
+                      )}
                     </td>
                     <td className="p-4">
-                      {getStatusBadge(lead.status)}
+                      <div className="mb-1">{getStatusBadge(lead.status)}</div>
+                      {lead.cakto_status && (
+                        <div className="text-[10px] text-gray-500 font-mono">Cakto: {lead.cakto_status}</div>
+                      )}
                     </td>
                     <td className="p-4">
                       <div className="text-sm text-gray-700">
                         {lead.profiles?.full_name || <span className="text-gray-400 italic">Na Fila</span>}
                       </div>
                     </td>
-                    <td className="p-4 text-sm text-gray-500">
-                      {new Date(lead.created_at).toLocaleString('pt-BR')}
+                    <td className="p-4">
+                      <button
+                        onClick={() => setSelectedLead(lead)}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded hover:bg-black transition-colors"
+                      >
+                        <Info className="w-3.5 h-3.5" />
+                        Ficha
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -228,6 +254,13 @@ export default function BaseDeLeadsPage() {
           </div>
         )}
       </div>
+
+      <LeadDetailsModal 
+        isOpen={selectedLead !== null} 
+        onClose={() => setSelectedLead(null)} 
+        lead={selectedLead} 
+        viewType="admin" 
+      />
     </div>
   )
 }

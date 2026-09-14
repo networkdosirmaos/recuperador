@@ -48,7 +48,7 @@ export default function ColaboradorDashboard() {
       // Buscar leads atuais do colaborador (onde ele o responsvel e no finalizou)
       const { data: leadsData } = await supabase
         .from('leads')
-        .select('id, name, phone, email, status, temperature, cakto_updated_at, updated_at')
+        .select('id, name, phone, email, product_name, status, temperature, updated_at, cakto_updated_at, payment_method, cakto_status, reason, cakto_event, created_at')
         .eq('current_assignee_id', userId)
         .not('status', 'in', '("recuperado","perdido")')
         .order('updated_at', { ascending: false })
