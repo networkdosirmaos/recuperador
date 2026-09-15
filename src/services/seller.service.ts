@@ -26,7 +26,7 @@ export const sellerService = {
   async getMyLeads(userId: string) {
     const { data, error } = await supabase
       .from('leads')
-      .select('id, name, phone, email, product_name, status, temperature, updated_at, gateway, gateway_updated_at, payment_method, gateway_status, reason, gateway_event, created_at, next_action_at')
+      .select('id, name, phone, email, product_name, status, temperature, updated_at, gateway, gateway_updated_at, payment_method, gateway_status, reason, gateway_event, created_at, next_action_at, notes, history_log')
       .eq('current_assignee_id', userId)
       .not('status', 'in', '("recuperado","perdido")')
       .order('updated_at', { ascending: false })
@@ -57,6 +57,22 @@ export const sellerService = {
     const { error } = await supabase
       .from('leads')
       .update({ next_action_at: nextActionAt, updated_at: new Date().toISOString() })
+      .eq('id', leadId)
+    if (error) throw error
+  },
+
+  async updateNote(leadId: string, notes: string) {
+    const { error } = await supabase
+      .from('leads')
+      .update({ notes, updated_at: new Date().toISOString() })
+      .eq('id', leadId)
+    if (error) throw error
+  },
+
+  async updateHistoryLog(leadId: string, historyLog: any[]) {
+    const { error } = await supabase
+      .from('leads')
+      .update({ history_log: historyLog, updated_at: new Date().toISOString() })
       .eq('id', leadId)
     if (error) throw error
   }
