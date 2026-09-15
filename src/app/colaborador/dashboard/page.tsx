@@ -47,7 +47,7 @@ export default function ColaboradorDashboard() {
   const isActive = profile?.is_active !== false
 
   // UI States
-  const [selectedTab, setSelectedTab] = useState<'todos' | 'novo' | 'em_atendimento' | 'retornos'>('todos')
+  const [selectedTab, setSelectedTab] = useState<'todos' | 'novo' | 'em_atendimento' | 'retornos' | 'recuperados'>('todos')
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
 
   // Derived Data
@@ -55,9 +55,12 @@ export default function ColaboradorDashboard() {
     let novos = 0
     let retornos = 0
     let em_atendimento = 0
+    let recuperados_count = 0
 
     myLeads.forEach((l: any) => {
-      if (l.next_action_at) {
+      if (l.status === 'recuperado') {
+        recuperados_count++
+      } else if (l.next_action_at) {
         retornos++
       } else if (l.status === 'novo') {
         novos++
@@ -67,8 +70,9 @@ export default function ColaboradorDashboard() {
     })
 
     const filtered = myLeads.filter((l: any) => {
-      if (selectedTab === 'todos') return true
-      if (selectedTab === 'retornos') return !!l.next_action_at
+      if (selectedTab === 'todos') return l.status !== 'recuperado'
+      if (selectedTab === 'recuperados') return l.status === 'recuperado'
+      if (selectedTab === 'retornos') return !!l.next_action_at && l.status !== 'recuperado'
       if (selectedTab === 'novo') return !l.next_action_at && l.status === 'novo'
       if (selectedTab === 'em_atendimento') return !l.next_action_at && l.status === 'em_atendimento'
       return true
@@ -95,7 +99,7 @@ export default function ColaboradorDashboard() {
     return { 
       filteredLeads: filtered, 
       groupedLeads: grouped,
-      counts: { novos, retornos, em_atendimento, todos: myLeads.length } 
+      counts: { novos, retornos, em_atendimento, recuperados: recuperados_count, todos: myLeads.length - recuperados_count } 
     }
   }, [myLeads, selectedTab])
 
@@ -212,7 +216,7 @@ export default function ColaboradorDashboard() {
       <InboxKPIs 
         novos={counts.novos} 
         retornos={counts.retornos} 
-        recuperados={0}
+        recuperados={counts.recuperados}
       />
 
       {/* TABS e Sort */}
@@ -241,6 +245,12 @@ export default function ColaboradorDashboard() {
             className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${selectedTab === 'retornos' ? 'bg-[#7c3aed] text-white shadow-sm' : 'bg-white border border-[#e5e7eb] text-[#374151] hover:bg-gray-50'}`}
           >
             Retornos ({counts.retornos})
+          </button>
+          <button 
+            onClick={() => setSelectedTab('recuperados')}
+            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${selectedTab === 'recuperados' ? 'bg-[#10b981] text-white shadow-sm' : 'bg-white border border-[#e5e7eb] text-[#10b981] hover:bg-green-50'}`}
+          >
+            🏆 Aprovados ({counts.recuperados})
           </button>
         </div>
         <div className="hidden md:flex items-center gap-1 text-[#6b7280] text-sm font-medium cursor-pointer hover:text-gray-900">

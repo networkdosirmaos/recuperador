@@ -65,8 +65,19 @@ export const coreLeadService = {
 
     let finalLeadId = null
     const temperature = (payload.gatewayStatus === 'waiting_payment' || payload.gatewayStatus === 'pending' || payload.event.includes('abandonment')) ? 'quente' : 'frio'
+    
+    // FASE 1: Inteligência (Se comprou, limpa a fila = 'recuperado')
+    const isApproved = payload.event === 'purchase_approved' || payload.gatewayStatus === 'approved'
+
+    let historyLog = []
 
     if (existingLead) {
+      // Puxa o history_log atual
+      const { data: leadData } = await supabaseAdmin.from('leads').select('history_log').eq('id', existingLead.id).single()
+      if (leadData && Array.isArray(leadData.history_log)) {
+        historyLog = leadData.history_log
+      }
+
       // 3A. ATUALIZAR (Upsert)
       const { data: updated, error: updateError } = await supabaseAdmin
         .from('leads')
@@ -78,7 +89,9 @@ export const coreLeadService = {
           reason: payload.isPing ? 'Webhook recebido (Update)' : payload.refusalReason,
           temperature,
           name: payload.nome || undefined,
-          product_name: payload.produto !== 'Produto Não Informado' ? payload.produto : undefined
+          product_name: payload.produto !== 'Produto Não Informado' ? payload.produto : undefined,
+          // Se for compra aprovada, joga pro status de recuperado. Senão mantém o atual
+          ...(isApproved ? { status: 'recuperado' } : {})
         })
         .eq('id', existingLead.id)
         .select('id')
@@ -105,7 +118,7 @@ export const coreLeadService = {
         gateway_event: payload.event,
         gateway_metadata: payload.rawPayload,
         list_id: payload.listId,
-        status: 'novo',
+        status: isApproved ? 'recuperado' : 'novo',
         temperature,
         current_assignee_id: assignedSellerId 
       }
@@ -120,14 +133,27 @@ export const coreLeadService = {
       finalLeadId = inserted.id
     }
 
-    // 4. REGISTRAR O HISTÓRICO (Timeline)
-    await supabaseAdmin.from('lead_events').insert({
-      lead_id: finalLeadId,
-      gateway_event: payload.event,
-      gateway_status: payload.gatewayStatus,
-      reason: payload.isPing ? 'Webhook de Teste' : payload.refusalReason,
-      metadata: payload.rawPayload
-    })
+    // 4. REGISTRAR O HISTÓRICO (Timeline - JSONB)
+    const newEvent = {
+      type: payload.event,
+      description: payload.isPing ? 'Webhook de Teste' : (payload.refusalReason || payload.gatewayStatus),
+      created_at: new Date().toISOString()
+    }
+    
+    historyLog.push(newEvent)
+
+    await supabaseAdmin.from('leads').update({ history_log: historyLog }).eq('id', finalLeadId)
+
+    // Tenta gravar na lead_events legada se ela existir
+    try {
+      await supabaseAdmin.from('lead_events').insert({
+        lead_id: finalLeadId,
+        gateway_event: payload.event,
+        gateway_status: payload.gatewayStatus,
+        reason: payload.isPing ? 'Webhook de Teste' : payload.refusalReason,
+        metadata: payload.rawPayload
+      })
+    } catch(e) {}
 
     return { leadId: finalLeadId }
   }

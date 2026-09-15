@@ -52,23 +52,32 @@ export function InboxLeadCard({ lead, isSelected, onClick }: InboxLeadCardProps)
         <div className="flex flex-wrap items-center gap-2 mb-1">
           <h3 className="text-[15px] font-bold text-[#1a1d23] mr-2">{lead.name}</h3>
           
-          {/* Tags */}
-          {lead.gateway_status && (
-            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${gatewayTagBg} ${gatewayTagText}`}>
-              {lead.gateway_status.replace('_', ' ')}
+          {/* Badge do Evento de Gateway Principal */}
+          {lead.gateway_event && (
+            <span className={`px-2 py-0.5 rounded text-[10.5px] font-bold uppercase tracking-wide border ${gatewayTagBg} ${gatewayTagText} border-current border-opacity-20 flex items-center gap-1`}>
+              {lead.gateway_event === 'pix_generated' ? '💠 PIX GERADO' : 
+               lead.gateway_event === 'checkout_abandoned' ? '🛒 ABANDONO' : 
+               lead.gateway_event === 'purchase_refused' ? '💳 RECUSADO' : 
+               lead.gateway_event === 'purchase_approved' ? '✅ APROVADO' : 
+               lead.gateway_event.replace('_', ' ')}
             </span>
           )}
-          {lead.temperature === 'quente' && (
+
+          {/* CRM Status Oculto em Recuperados se preferir, mas vamos manter */}
+          {lead.status !== 'novo' && lead.status !== 'recuperado' && (
+             <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-[#eff6ff] text-[#3b82f6]">
+               {lead.status.replace('_', ' ')}
+             </span>
+          )}
+          
+          {lead.temperature === 'quente' && lead.status !== 'recuperado' && (
             <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-[#fff7ed] text-[#ea580c] flex items-center gap-1">
               🔥 Quente
             </span>
           )}
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-[#eff6ff] text-[#3b82f6]">
-            {lead.status.replace('_', ' ')}
-          </span>
         </div>
 
-        <div className="text-[13px] text-[#6b7280] mb-2 leading-relaxed">
+        <div className="text-[13px] text-[#6b7280] mb-2.5 leading-relaxed">
           {lead.product_name || 'Produto não identificado'} 
           <br/>
           {lead.gateway_metadata && (lead.gateway_metadata as any).amount && (
@@ -76,13 +85,25 @@ export function InboxLeadCard({ lead, isSelected, onClick }: InboxLeadCardProps)
           )}
         </div>
 
-        <div className="text-[12px] text-[#9ca3af] flex items-center gap-1 mt-1">
-          {lead.gateway_status === 'waiting_payment' ? `Gerado há ${getTimeAgo(lead.created_at)}` : `Último contato há ${getTimeAgo(lead.updated_at)}`}
-          <span>·</span>
-          {lead.next_action_at ? (
-            <span>retorno {new Date(lead.next_action_at).toLocaleDateString() === new Date().toLocaleDateString() ? 'hoje às' : ''} {new Date(lead.next_action_at).toLocaleString('pt-BR', { timeStyle: 'short', dateStyle: new Date(lead.next_action_at).toLocaleDateString() !== new Date().toLocaleDateString() ? 'short' : undefined })}</span>
+        <div className="flex items-center gap-2 mt-1">
+          {/* Relógio de Queda / Urgência */}
+          {lead.status === 'recuperado' ? (
+            <span className="text-[12px] font-bold text-[#10b981] bg-[#ecfdf5] px-2 py-0.5 rounded-full">
+              Venda Recuperada
+            </span>
           ) : (
-            <span>ainda não contatado</span>
+            <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full ${lead.gateway_status === 'refused' || lead.gateway_status === 'checkout_abandoned' ? 'text-[#ef4444] bg-[#fef2f2]' : 'text-[#ea580c] bg-[#fff7ed]'}`}>
+              ⏱️ Caiu {getTimeAgo(lead.created_at)}
+            </span>
+          )}
+          
+          {lead.next_action_at && (
+            <>
+              <span className="text-[#9ca3af]">•</span>
+              <span className="text-[12px] text-[#9ca3af] font-medium">
+                Retorno: {new Date(lead.next_action_at).toLocaleString('pt-BR', { timeStyle: 'short', dateStyle: new Date(lead.next_action_at).toLocaleDateString() !== new Date().toLocaleDateString() ? 'short' : undefined })}
+              </span>
+            </>
           )}
         </div>
       </div>

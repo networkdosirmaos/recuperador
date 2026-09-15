@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { X, CalendarClock, MessageCircle, AlertCircle, Calendar, Clock, Building, DollarSign, QrCode, Phone, Activity } from 'lucide-react'
+import { X, CalendarClock, MessageCircle, AlertCircle, Calendar, Clock, Building, DollarSign, QrCode, Phone, Activity, CreditCard, ShoppingCart, CheckCircle2 } from 'lucide-react'
 import type { LeadRow } from '@/types/database.types'
 import { formatDistanceToNow, addDays, setHours, setMinutes } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -87,16 +87,59 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
 
   const renderHistory = () => {
     const logs = Array.isArray(lead.history_log) ? lead.history_log : []
+    // Reverter para mostrar os mais recentes no topo
+    const reversedLogs = [...logs].reverse()
+
     return (
-      <div className="relative border-l-2 border-[#e5e7eb] ml-2 mt-4 space-y-6">
-        {logs.map((log: any, idx) => (
-          <div key={idx} className="relative pl-6">
-            <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[#f5f3ff] border-[3px] border-[#7c3aed]"></span>
-            <p className="text-[13px] text-[#374151] font-medium">{log.description || log.type}</p>
-            <p className="text-[12px] text-[#9ca3af]">{formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR })}</p>
-          </div>
-        ))}
-        {logs.length === 0 && (
+      <div className="relative border-l-2 border-[#e5e7eb] ml-3 mt-4 space-y-6">
+        {reversedLogs.map((log: any, idx) => {
+          let Icon = Activity
+          let bgClass = 'bg-[#f3f4f6]'
+          let textClass = 'text-[#6b7280]'
+          let borderClass = 'border-[#e5e7eb]'
+
+          if (log.type === 'pix_generated') {
+            Icon = QrCode
+            bgClass = 'bg-[#f5f3ff]'
+            textClass = 'text-[#7c3aed]'
+            borderClass = 'border-[#7c3aed]'
+          } else if (log.type === 'purchase_refused') {
+            Icon = CreditCard
+            bgClass = 'bg-[#fef2f2]'
+            textClass = 'text-[#ef4444]'
+            borderClass = 'border-[#ef4444]'
+          } else if (log.type === 'checkout_abandoned') {
+            Icon = ShoppingCart
+            bgClass = 'bg-[#fff7ed]'
+            textClass = 'text-[#ea580c]'
+            borderClass = 'border-[#ea580c]'
+          } else if (log.type === 'purchase_approved') {
+            Icon = CheckCircle2
+            bgClass = 'bg-[#ecfdf5]'
+            textClass = 'text-[#10b981]'
+            borderClass = 'border-[#10b981]'
+          }
+
+          return (
+            <div key={idx} className="relative pl-6">
+              <span className={`absolute -left-[17px] top-0 w-8 h-8 rounded-full flex items-center justify-center border-2 bg-white ${borderClass} ${textClass}`}>
+                <Icon className="w-4 h-4" />
+              </span>
+              <div className="pt-1">
+                <p className={`text-[13px] font-bold ${textClass}`}>
+                  {log.type === 'pix_generated' ? 'PIX Gerado' :
+                   log.type === 'purchase_refused' ? 'Cartão Recusado' :
+                   log.type === 'checkout_abandoned' ? 'Abandono de Carrinho' :
+                   log.type === 'purchase_approved' ? 'Compra Aprovada!' :
+                   (log.type || 'Evento')}
+                </p>
+                <p className="text-[13px] text-[#374151] mt-0.5">{log.description}</p>
+                <p className="text-[12px] text-[#9ca3af] mt-1">{new Date(log.created_at).toLocaleString('pt-BR')}</p>
+              </div>
+            </div>
+          )
+        })}
+        {reversedLogs.length === 0 && (
           <div className="relative pl-6">
             <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[#f5f3ff] border-[3px] border-[#7c3aed]"></span>
             <p className="text-[13px] text-[#374151]">Lead entrou na fila</p>
