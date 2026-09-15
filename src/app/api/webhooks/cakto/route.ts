@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { coreLeadService } from '@/services/coreLead.service'
 
 export async function POST(req: Request) {
   try {
@@ -62,119 +62,33 @@ export async function POST(req: Request) {
     const paymentMethod = mainItem.paymentMethod || mainItem.payment_method || null
     const refusalReason = mainItem.reason || mainItem.refundReason || null
 
-    // ROLETA AUTOMÁTICA (ROUND-ROBIN)
-    let assignedSellerId = null
-    const { data: availableSellers } = await supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('role', 'collaborator')
-      .eq('is_active', true)
-      .order('last_assigned_at', { ascending: true, nullsFirst: true })
-      .limit(1)
-
-    if (availableSellers && availableSellers.length > 0) {
-      assignedSellerId = availableSellers[0].id
-      
-      // Atualizar o cronômetro do vendedor escolhido (para ele ir pro fim da fila)
-      await supabaseAdmin
-        .from('profiles')
-        .update({ last_assigned_at: new Date().toISOString() })
-        .eq('id', assignedSellerId)
-    }
-
     const isPing = event === 'ping' || event === 'test_webhook' || (!nome && !email && !phone)
 
-    // 1. DEDUPLICAÇÃO (Buscar se o Lead já existe)
-    let existingLead = null
-    if (mainItem.customerId || email || phone) {
-      const orConditions = []
-      if (mainItem.customerId) orConditions.push(`customer_id.eq.${mainItem.customerId}`)
-      if (email) orConditions.push(`email.eq.${email}`)
-      if (phone) orConditions.push(`phone.eq.${phone}`)
-
-      if (orConditions.length > 0) {
-        const { data: foundLeads } = await supabaseAdmin
-          .from('leads')
-          .select('id, current_assignee_id')
-          .or(orConditions.join(','))
-          .limit(1)
-        
-        if (foundLeads && foundLeads.length > 0) {
-          existingLead = foundLeads[0]
-        }
-      }
-    }
-
-    let finalLeadId = null
-
-    if (existingLead) {
-      // 2A. ATUALIZAR (Upsert)
-      const { data: updated, error: updateError } = await supabaseAdmin
-        .from('leads')
-        .update({
-          gateway_updated_at: updatedAt,
-          gateway_status: gatewayStatus,
-          gateway_event: event,
-          gateway_metadata: body,
-          reason: isPing ? 'Webhook recebido (Update)' : refusalReason,
-          temperature: (gatewayStatus === 'waiting_payment' || gatewayStatus === 'pending' || event.includes('abandonment')) ? 'quente' : 'frio',
-          // Atualizamos campos opcionais caso venham mais completos no segundo webhook
-          name: nome || undefined,
-          product_name: produto !== 'Produto Não Informado' ? produto : undefined
-        })
-        .eq('id', existingLead.id)
-        .select('id')
-        .single()
-      
-      if (updateError) throw updateError
-      finalLeadId = updated.id
-    } else {
-      // 2B. INSERIR NOVO (O lead não existia)
-      const leadData = {
-        name: isPing ? '🛠️ TESTE CAKTO (Webhook)' : (nome || 'Sem Nome'),
-        phone: phone,
-        email: email,
-        customer_id: mainItem.customerId || customerObj.id || null,
-        product_name: produto,
-        gateway: 'cakto',
-        gateway_updated_at: updatedAt,
-        refunded_at: mainItem.refundedAt || null,
-        chargedback_at: mainItem.chargedbackAt || null,
-        refund_reason: mainItem.refundReason || mainItem.refund_reason || null,
-        payment_method: paymentMethod,
-        reason: isPing ? 'Webhook de Teste/Ping recebido com sucesso' : refusalReason,
-        gateway_status: gatewayStatus,
-        gateway_event: event,
-        gateway_metadata: body,
-        list_id: listId,
-        status: 'novo', 
-        temperature: (gatewayStatus === 'waiting_payment' || gatewayStatus === 'pending' || event.includes('abandonment')) ? 'quente' : 'frio',
-        current_assignee_id: assignedSellerId 
-      }
-
-      const { data: inserted, error: insertError } = await supabaseAdmin
-        .from('leads')
-        .insert(leadData)
-        .select('id')
-        .single()
-
-      if (insertError) throw insertError
-      finalLeadId = inserted.id
-    }
-
-    // 3. REGISTRAR O HISTÓRICO (Timeline)
-    await supabaseAdmin.from('lead_events').insert({
-      lead_id: finalLeadId,
-      gateway_event: event,
-      gateway_status: gatewayStatus,
-      reason: isPing ? 'Webhook de Teste' : refusalReason,
-      metadata: body
+    // ROLETA, DEDUPLICAÇÃO E HISTÓRICO agora vivem no CoreLeadService
+    const { leadId } = await coreLeadService.processWebhookEvent({
+      listId,
+      event,
+      gateway: 'cakto',
+      nome,
+      email,
+      phone,
+      produto,
+      customerId: mainItem.customerId || customerObj.id || null,
+      gatewayStatus,
+      updatedAt,
+      paymentMethod,
+      refusalReason,
+      refundedAt: mainItem.refundedAt || null,
+      chargedbackAt: mainItem.chargedbackAt || null,
+      refundReason: mainItem.refundReason || mainItem.refund_reason || null,
+      isPing,
+      rawPayload: body
     })
 
-    return NextResponse.json({ success: true, lead_id: finalLeadId, message: 'Lead processado com sucesso' })
+    return NextResponse.json({ success: true, lead_id: leadId, message: 'Lead processado com sucesso via CoreLeadService' })
 
   } catch (error: any) {
-    console.error('Erro crítico no Webhook:', error)
+    console.error('Erro crítico no Webhook Cakto:', error)
     return NextResponse.json({ error: 'Erro interno', message: error?.message }, { status: 500 })
   }
 }
