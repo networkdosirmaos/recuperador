@@ -49,6 +49,13 @@ export default function ColaboradorDashboard() {
   // UI States
   const [selectedTab, setSelectedTab] = useState<'todos' | 'novo' | 'em_atendimento' | 'retornos' | 'recuperados'>('todos')
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
+  
+  // Relógio Fantasma (atualiza a cada 30 segundos)
+  const [nowTick, setNowTick] = useState(Date.now())
+  useEffect(() => {
+    const interval = setInterval(() => setNowTick(Date.now()), 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   // Derived Data
   const { filteredLeads, groupedLeads, counts } = useMemo(() => {
@@ -56,12 +63,16 @@ export default function ColaboradorDashboard() {
     let retornos = 0
     let em_atendimento = 0
     let recuperados_count = 0
+    let coolingDown_count = 0
 
     const isApproved = (l: any) => l.status === 'recuperado' || l.gateway_event === 'purchase_approved' || l.gateway_status === 'approved'
+    const isCoolingDown = (l: any) => l.gateway_event === 'pix_generated' && l.status === 'novo' && (nowTick - new Date(l.updated_at || l.created_at).getTime() < 6 * 60 * 1000)
 
     myLeads.forEach((l: any) => {
       if (isApproved(l)) {
         recuperados_count++
+      } else if (isCoolingDown(l)) {
+        coolingDown_count++
       } else if (l.next_action_at) {
         retornos++
       } else if (l.status === 'novo') {
@@ -72,21 +83,22 @@ export default function ColaboradorDashboard() {
     })
 
     const filtered = myLeads.filter((l: any) => {
-      if (selectedTab === 'todos') return !isApproved(l)
-      if (selectedTab === 'recuperados') return isApproved(l)
-      if (selectedTab === 'retornos') return !!l.next_action_at && !isApproved(l)
-      if (selectedTab === 'novo') return !l.next_action_at && l.status === 'novo' && !isApproved(l)
-      if (selectedTab === 'em_atendimento') return !l.next_action_at && l.status === 'em_atendimento' && !isApproved(l)
-      return true
+      if (isApproved(l)) return selectedTab === 'recuperados'
+      if (isCoolingDown(l)) return false
+
+      if (selectedTab === 'todos') return true
+      if (selectedTab === 'retornos') return !!l.next_action_at
+      if (selectedTab === 'novo') return !l.next_action_at && l.status === 'novo'
+      if (selectedTab === 'em_atendimento') return !l.next_action_at && l.status === 'em_atendimento'
+      return false
     })
 
     // Grouping by time (Agora = less than 2h old, Hoje = today)
-    const now = new Date()
     const grouped = { agora: [] as any[], hoje: [] as any[], antigos: [] as any[] }
     
     filtered.forEach((l: any) => {
       const dateToCompare = l.next_action_at ? new Date(l.next_action_at) : new Date(l.created_at || l.updated_at)
-      const diffMs = now.getTime() - dateToCompare.getTime()
+      const diffMs = nowTick - dateToCompare.getTime()
       const diffHours = diffMs / (1000 * 60 * 60)
       
       if (diffHours < 2 && diffHours >= -1) {
@@ -101,9 +113,16 @@ export default function ColaboradorDashboard() {
     return { 
       filteredLeads: filtered, 
       groupedLeads: grouped,
-      counts: { novos, retornos, em_atendimento, recuperados: recuperados_count, todos: myLeads.length - recuperados_count } 
+      counts: { 
+        novos, 
+        retornos, 
+        em_atendimento, 
+        recuperados: recuperados_count, 
+        coolingDown: coolingDown_count,
+        todos: myLeads.length - recuperados_count - coolingDown_count 
+      } 
     }
-  }, [myLeads, selectedTab])
+  }, [myLeads, selectedTab, nowTick])
 
   // Mutations
   const updateStatusMutation = useMutation({
@@ -214,6 +233,20 @@ export default function ColaboradorDashboard() {
           </div>
         </div>
       ) : null}
+
+      {counts.coolingDown > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center gap-3 animate-pulse">
+          <div className="bg-white p-1.5 rounded-full shadow-sm text-blue-600">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+          <div>
+            <p className="text-[14px] font-semibold text-blue-900">
+              Você tem {counts.coolingDown} {counts.coolingDown === 1 ? 'lead aguardando' : 'leads aguardando'} pagamento de Pix...
+            </p>
+            <p className="text-[12px] text-blue-700">Eles aparecerão na sua fila automaticamente caso não paguem nos próximos minutos.</p>
+          </div>
+        </div>
+      )}
 
       <InboxKPIs 
         novos={counts.novos} 

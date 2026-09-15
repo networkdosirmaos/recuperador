@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { QrCode, CreditCard, FileText } from 'lucide-react'
 import type { LeadRow } from '@/types/database.types'
 
@@ -23,6 +23,12 @@ export function AdminTable({
   onToggleSelectLead,
   onSelectLead
 }: AdminTableProps) {
+  
+  const [nowTick, setNowTick] = useState(Date.now())
+  useEffect(() => {
+    const interval = setInterval(() => setNowTick(Date.now()), 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   const getPaymentIcon = (method?: string | null) => {
     switch (method?.toLowerCase()) {
@@ -135,7 +141,14 @@ export function AdminTable({
                   )}
                   {showColumns.crm_status && (
                     <td className="p-4">
-                      <div className="mb-1">{getStatusBadge(lead.status)}</div>
+                      <div className="flex flex-col gap-1 items-start">
+                        {getStatusBadge(lead.status)}
+                        {lead.gateway_event === 'pix_generated' && lead.status === 'novo' && (nowTick - new Date(lead.updated_at || lead.created_at).getTime() < 6 * 60 * 1000) && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-blue-50 text-blue-700 animate-pulse border border-blue-200">
+                            ⏳ Geladeira
+                          </span>
+                        )}
+                      </div>
                     </td>
                   )}
                   {showColumns.seller && (
