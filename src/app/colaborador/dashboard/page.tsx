@@ -64,8 +64,9 @@ export default function ColaboradorDashboard() {
     let em_andamento_count = 0
     let fechados_count = 0
     let coolingDown_count = 0
-
-    const isApproved = (l: any) => l.status === 'recuperado' || l.gateway_event === 'purchase_approved' || l.gateway_status === 'approved'
+    const isApproved = (l: any) => l.status === 'recuperado' // Apenas verdadeiras recuperações
+    const isOrganic = (l: any) => l.status === 'venda_organica' || l.gateway_event === 'purchase_approved' || l.gateway_status === 'approved'
+    
     const isCoolingDown = (l: any) => {
       const isPixEvent = l.gateway_event === 'pix_generated' || l.gateway_event === 'pix_gerado' || l.gateway_event === 'waiting_payment';
       return isPixEvent && l.status === 'novo' && (nowTick - new Date(l.updated_at || l.created_at).getTime() < 6 * 60 * 1000);
@@ -74,7 +75,8 @@ export default function ColaboradorDashboard() {
     const isFuture = (l: any) => l.next_action_at && new Date(l.next_action_at).getTime() > nowTick
 
     const getBucket = (l: any) => {
-      if (isApproved(l)) return 'fechados'
+      if (isOrganic(l)) return 'ignorar' // Venda lisa, some da tela
+      if (isApproved(l)) return 'fechados' // Recuperados reais
       if (isCoolingDown(l)) return 'geladeira'
       // Se é novo OU o retorno está vencido -> PENDENTES (Fogo)
       if (l.status === 'novo' || isPastDue(l)) return 'pendentes'
@@ -92,7 +94,7 @@ export default function ColaboradorDashboard() {
 
     const filtered = myLeads.filter((l: any) => {
       const bucket = getBucket(l)
-      if (bucket === 'geladeira') return false
+      if (bucket === 'geladeira' || bucket === 'ignorar') return false
       return bucket === selectedTab
     })
 

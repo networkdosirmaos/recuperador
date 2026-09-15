@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { QrCode, CreditCard, FileText } from 'lucide-react'
+import { QrCode, CreditCard, FileText, Globe } from 'lucide-react'
 import type { LeadRow } from '@/types/database.types'
 
 interface AdminTableProps {
@@ -43,6 +43,8 @@ export function AdminTable({
     switch (status) {
       case 'novo': return <span className="px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800">Novo</span>
       case 'em_atendimento': return <span className="px-2 py-1 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">Em Atend.</span>
+      case 'venda_organica':
+        return <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-sm flex items-center gap-1.5"><Globe className="w-3.5 h-3.5"/> Venda Orgânica</span>
       case 'recuperado': return <span className="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">Recuperado</span>
       case 'perdido': return <span className="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">Perdido</span>
       default: return <span className="px-2 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-800">{status}</span>

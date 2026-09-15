@@ -82,7 +82,7 @@ export const coreLeadService = {
       // Se for reembolso/chargeback, forçamos o lead a voltar pra fila (status novo e urgente)
       let newStatus = undefined
       if (isApproved) {
-        newStatus = 'recuperado'
+        newStatus = 'venda_organica'
       } else if (isRefundOrChargeback) {
         newStatus = 'novo'
       }
@@ -126,7 +126,7 @@ export const coreLeadService = {
         gateway_event: payload.event,
         gateway_metadata: payload.rawPayload,
         list_id: payload.listId,
-        status: isApproved ? 'recuperado' : 'novo',
+        status: isApproved ? 'venda_organica' : 'novo',
         temperature: isRefundOrChargeback ? 'quente' : temperature,
         current_assignee_id: assignedSellerId 
       }
