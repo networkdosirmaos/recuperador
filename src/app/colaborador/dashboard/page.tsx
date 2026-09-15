@@ -127,7 +127,7 @@ export default function ColaboradorDashboard() {
   }, [myLeads, selectedTab, nowTick])
 
   // Motor de Gamificação
-  const { isAnimating } = useLeadGamification(counts.novos)
+  const { isAnimating } = useLeadGamification(counts.pendentes)
 
   // Mutations
   const updateStatusMutation = useMutation({
