@@ -33,7 +33,7 @@ export function InboxKPIs({ novos, retornos, recuperados, animate }: InboxKPIsPr
 
       <div className="bg-white rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-[#e5e7eb] p-5 flex items-center gap-4">
         <div className="w-[46px] h-[46px] rounded-full bg-[#ecfdf5] flex items-center justify-center text-[#10b981]">
-          <CheckCircle className="w-[22px] h-[22px]" />
+          <CheckCircle2 className="w-[22px] h-[22px]" />
         </div>
         <div>
           <div className="text-[26px] font-bold text-[#1a1d23] leading-none">{recuperados}</div>
