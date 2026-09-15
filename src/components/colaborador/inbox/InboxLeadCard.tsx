@@ -55,7 +55,7 @@ export function InboxLeadCard({ lead, isSelected, onClick }: InboxLeadCardProps)
           {/* Badge do Evento de Gateway Principal */}
           {lead.gateway_event && (
             <span className={`px-2 py-0.5 rounded text-[10.5px] font-bold uppercase tracking-wide border ${gatewayTagBg} ${gatewayTagText} border-current border-opacity-20 flex items-center gap-1`}>
-              {lead.gateway_event === 'pix_generated' ? '💠 PIX GERADO' : 
+              {(lead.gateway_event === 'pix_generated' || lead.gateway_event === 'pix_gerado' || lead.gateway_event === 'waiting_payment') ? '💠 PIX GERADO' : 
                lead.gateway_event === 'checkout_abandoned' ? '🛒 ABANDONO' : 
                lead.gateway_event === 'purchase_refused' ? '💳 RECUSADO' : 
                lead.gateway_event === 'purchase_approved' ? '✅ APROVADO' : 

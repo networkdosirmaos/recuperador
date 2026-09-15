@@ -66,7 +66,10 @@ export default function ColaboradorDashboard() {
     let coolingDown_count = 0
 
     const isApproved = (l: any) => l.status === 'recuperado' || l.gateway_event === 'purchase_approved' || l.gateway_status === 'approved'
-    const isCoolingDown = (l: any) => l.gateway_event === 'pix_generated' && l.status === 'novo' && (nowTick - new Date(l.updated_at || l.created_at).getTime() < 6 * 60 * 1000)
+    const isCoolingDown = (l: any) => {
+      const isPixEvent = l.gateway_event === 'pix_generated' || l.gateway_event === 'pix_gerado' || l.gateway_event === 'waiting_payment';
+      return isPixEvent && l.status === 'novo' && (nowTick - new Date(l.updated_at || l.created_at).getTime() < 6 * 60 * 1000);
+    }
 
     myLeads.forEach((l: any) => {
       if (isApproved(l)) {

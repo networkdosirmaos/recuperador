@@ -143,7 +143,7 @@ export function AdminTable({
                     <td className="p-4">
                       <div className="flex flex-col gap-1 items-start">
                         {getStatusBadge(lead.status)}
-                        {lead.gateway_event === 'pix_generated' && lead.status === 'novo' && (nowTick - new Date(lead.updated_at || lead.created_at).getTime() < 6 * 60 * 1000) && (
+                        {(lead.gateway_event === 'pix_generated' || lead.gateway_event === 'pix_gerado' || lead.gateway_event === 'waiting_payment') && lead.status === 'novo' && (nowTick - new Date(lead.updated_at || lead.created_at).getTime() < 6 * 60 * 1000) && (
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-blue-50 text-blue-700 animate-pulse border border-blue-200">
                             ⏳ Geladeira
                           </span>

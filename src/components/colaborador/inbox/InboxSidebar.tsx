@@ -98,7 +98,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
           let textClass = 'text-[#6b7280]'
           let borderClass = 'border-[#e5e7eb]'
 
-          if (log.type === 'pix_generated') {
+          if (log.type === 'pix_generated' || log.type === 'pix_gerado' || log.type === 'waiting_payment') {
             Icon = QrCode
             bgClass = 'bg-[#f5f3ff]'
             textClass = 'text-[#7c3aed]'
@@ -127,7 +127,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
               </span>
               <div className="pt-1">
                 <p className={`text-[13px] font-bold ${textClass}`}>
-                  {log.type === 'pix_generated' ? 'PIX Gerado' :
+                  {(log.type === 'pix_generated' || log.type === 'pix_gerado' || log.type === 'waiting_payment') ? 'PIX Gerado' :
                    log.type === 'purchase_refused' ? 'Cartão Recusado' :
                    log.type === 'checkout_abandoned' ? 'Abandono de Carrinho' :
                    log.type === 'purchase_approved' ? 'Compra Aprovada!' :
