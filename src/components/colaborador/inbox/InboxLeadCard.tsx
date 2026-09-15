@@ -59,6 +59,8 @@ export function InboxLeadCard({ lead, isSelected, onClick }: InboxLeadCardProps)
                lead.gateway_event === 'checkout_abandoned' ? '🛒 ABANDONO' : 
                lead.gateway_event === 'purchase_refused' ? '💳 RECUSADO' : 
                lead.gateway_event === 'purchase_approved' ? '✅ APROVADO' : 
+               (lead.gateway_event === 'refunded' || lead.gateway_event === 'purchase_refunded' || lead.gateway_event?.includes('refund')) ? '🔄 REEMBOLSADO' : 
+               (lead.gateway_event === 'chargeback' || lead.gateway_event?.includes('chargeback')) ? '⚠️ CHARGEBACK' : 
                lead.gateway_event.replace('_', ' ')}
             </span>
           )}

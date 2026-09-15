@@ -68,6 +68,7 @@ export const coreLeadService = {
     
     // FASE 1: Inteligência (Se comprou, limpa a fila = 'recuperado')
     const isApproved = payload.event === 'purchase_approved' || payload.gatewayStatus === 'approved'
+    const isRefundOrChargeback = payload.event.includes('refund') || payload.event.includes('chargeback') || payload.gatewayStatus === 'refunded' || payload.gatewayStatus === 'chargeback'
 
     let historyLog = []
 
@@ -76,6 +77,14 @@ export const coreLeadService = {
       const { data: leadData } = await supabaseAdmin.from('leads').select('history_log').eq('id', existingLead.id).single()
       if (leadData && Array.isArray(leadData.history_log)) {
         historyLog = leadData.history_log
+      }
+
+      // Se for reembolso/chargeback, forçamos o lead a voltar pra fila (status novo e urgente)
+      let newStatus = undefined
+      if (isApproved) {
+        newStatus = 'recuperado'
+      } else if (isRefundOrChargeback) {
+        newStatus = 'novo'
       }
 
       // 3A. ATUALIZAR (Upsert)
@@ -87,11 +96,10 @@ export const coreLeadService = {
           gateway_event: payload.event,
           gateway_metadata: payload.rawPayload,
           reason: payload.isPing ? 'Webhook recebido (Update)' : payload.refusalReason,
-          temperature,
+          temperature: isRefundOrChargeback ? 'quente' : temperature,
           name: payload.nome || undefined,
           product_name: payload.produto !== 'Produto Não Informado' ? payload.produto : undefined,
-          // Se for compra aprovada, joga pro status de recuperado. Senão mantém o atual
-          ...(isApproved ? { status: 'recuperado' } : {})
+          ...(newStatus ? { status: newStatus } : {})
         })
         .eq('id', existingLead.id)
         .select('id')
@@ -119,7 +127,7 @@ export const coreLeadService = {
         gateway_metadata: payload.rawPayload,
         list_id: payload.listId,
         status: isApproved ? 'recuperado' : 'novo',
-        temperature,
+        temperature: isRefundOrChargeback ? 'quente' : temperature,
         current_assignee_id: assignedSellerId 
       }
 

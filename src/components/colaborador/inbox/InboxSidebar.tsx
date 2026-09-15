@@ -118,6 +118,16 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
             bgClass = 'bg-[#ecfdf5]'
             textClass = 'text-[#10b981]'
             borderClass = 'border-[#10b981]'
+          } else if (log.type?.includes('refund')) {
+            Icon = AlertCircle
+            bgClass = 'bg-[#fef2f2]'
+            textClass = 'text-[#dc2626]'
+            borderClass = 'border-[#dc2626]'
+          } else if (log.type?.includes('chargeback')) {
+            Icon = AlertCircle
+            bgClass = 'bg-[#fee2e2]'
+            textClass = 'text-[#b91c1c]'
+            borderClass = 'border-[#b91c1c]'
           }
 
           return (
@@ -131,6 +141,8 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
                    log.type === 'purchase_refused' ? 'Cartão Recusado' :
                    log.type === 'checkout_abandoned' ? 'Abandono de Carrinho' :
                    log.type === 'purchase_approved' ? 'Compra Aprovada!' :
+                   log.type?.includes('refund') ? 'Reembolso Solicitado' :
+                   log.type?.includes('chargeback') ? 'Chargeback / Disputa' :
                    (log.type || 'Evento')}
                 </p>
                 <p className="text-[13px] text-[#374151] mt-0.5">{log.description}</p>
