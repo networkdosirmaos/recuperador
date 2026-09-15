@@ -12,6 +12,7 @@ import toast from 'react-hot-toast'
 import { InboxKPIs } from '@/components/colaborador/inbox/InboxKPIs'
 import { InboxLeadCard } from '@/components/colaborador/inbox/InboxLeadCard'
 import { InboxSidebar } from '@/components/colaborador/inbox/InboxSidebar'
+import { useLeadGamification } from '@/hooks/useLeadGamification'
 
 export default function ColaboradorDashboard() {
   const queryClient = useQueryClient()
@@ -126,6 +127,9 @@ export default function ColaboradorDashboard() {
       } 
     }
   }, [myLeads, selectedTab, nowTick])
+
+  // Motor de Gamificação
+  const { isAnimating } = useLeadGamification(counts.novos)
 
   // Mutations
   const updateStatusMutation = useMutation({
@@ -255,6 +259,7 @@ export default function ColaboradorDashboard() {
         novos={counts.novos} 
         retornos={counts.retornos} 
         recuperados={counts.recuperados}
+        animate={isAnimating}
       />
 
       {/* TABS e Sort */}
