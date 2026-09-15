@@ -10,33 +10,33 @@ interface InboxKPIsProps {
 export function InboxKPIs({ novos, retornos, recuperados }: InboxKPIsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center gap-4">
-        <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
-          <Users className="w-6 h-6" />
+      <div className="bg-white rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-[#e5e7eb] p-5 flex items-center gap-4">
+        <div className="w-[46px] h-[46px] rounded-full bg-[#f5f3ff] flex items-center justify-center text-[#7c3aed]">
+          <Users className="w-[22px] h-[22px]" />
         </div>
         <div>
-          <div className="text-2xl font-bold text-gray-900">{novos}</div>
-          <div className="text-sm text-gray-500">para atender</div>
+          <div className="text-[26px] font-bold text-[#1a1d23] leading-none">{novos}</div>
+          <div className="text-[14px] text-[#6b7280] mt-1 font-medium">para atender</div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center gap-4">
-        <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
-          <Clock className="w-6 h-6" />
+      <div className="bg-white rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-[#e5e7eb] p-5 flex items-center gap-4">
+        <div className="w-[46px] h-[46px] rounded-full bg-[#ecfdf5] flex items-center justify-center text-[#10b981]">
+          <Clock className="w-[22px] h-[22px]" />
         </div>
         <div>
-          <div className="text-2xl font-bold text-gray-900">{retornos}</div>
-          <div className="text-sm text-gray-500">retornos hoje</div>
+          <div className="text-[26px] font-bold text-[#1a1d23] leading-none">{retornos}</div>
+          <div className="text-[14px] text-[#6b7280] mt-1 font-medium">retornos hoje</div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center gap-4">
-        <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-green-600">
-          <CheckCircle className="w-6 h-6" />
+      <div className="bg-white rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-[#e5e7eb] p-5 flex items-center gap-4">
+        <div className="w-[46px] h-[46px] rounded-full bg-[#ecfdf5] flex items-center justify-center text-[#10b981]">
+          <CheckCircle className="w-[22px] h-[22px]" />
         </div>
         <div>
-          <div className="text-2xl font-bold text-gray-900">{recuperados}</div>
-          <div className="text-sm text-gray-500">recuperados</div>
+          <div className="text-[26px] font-bold text-[#1a1d23] leading-none">{recuperados}</div>
+          <div className="text-[14px] text-[#6b7280] mt-1 font-medium">recuperados</div>
         </div>
       </div>
     </div>

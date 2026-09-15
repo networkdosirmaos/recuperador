@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { X, CalendarClock, MessageCircle, AlertCircle, Save } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { X, CalendarClock, MessageCircle, AlertCircle, Calendar, Clock, Building, DollarSign, QrCode, Phone, Activity } from 'lucide-react'
 import type { LeadRow } from '@/types/database.types'
 import { formatDistanceToNow, addDays, setHours, setMinutes } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -10,10 +10,18 @@ interface InboxSidebarProps {
   onClose: () => void;
   onUpdateStatus: (leadId: string, status: string) => Promise<void>;
   onScheduleAction: (leadId: string, nextActionAt: string | null) => Promise<void>;
+  onSaveNote: (leadId: string, notes: string) => Promise<void>;
 }
 
-export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction }: InboxSidebarProps) {
+export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, onSaveNote }: InboxSidebarProps) {
   const [isUpdating, setIsUpdating] = useState(false)
+  const [noteText, setNoteText] = useState('')
+
+  useEffect(() => {
+    if (lead) {
+      setNoteText(lead.notes || '')
+    }
+  }, [lead])
 
   if (!lead) return null
 
@@ -26,7 +34,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction }
     }
   }
 
-  const handleSchedule = async (type: 'hoje_18' | 'amanha_manha' | 'limpar') => {
+  const handleSchedule = async (type: 'hoje_18' | 'amanha_manha' | 'limpar' | 'escolher') => {
     setIsUpdating(true)
     try {
       let date: Date | null = null
@@ -36,11 +44,24 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction }
         date = setMinutes(setHours(now, 18), 0)
       } else if (type === 'amanha_manha') {
         date = setMinutes(setHours(addDays(now, 1), 9), 0)
+      } else if (type === 'escolher') {
+        const input = document.createElement('input');
+        input.type = 'datetime-local';
+        input.onchange = async (e: any) => {
+          if (e.target.value) {
+            await onScheduleAction(lead.id!, new Date(e.target.value).toISOString())
+            toast.success('Retorno agendado!')
+            onClose()
+          }
+        }
+        input.click();
+        setIsUpdating(false)
+        return;
       }
 
       await onScheduleAction(lead.id!, date ? date.toISOString() : null)
-      toast.success(date ? 'Retorno agendado com sucesso!' : 'Agendamento removido!')
-      onClose() // Opcional: fecha a sidebar ao agendar para focar no próximo
+      if (type !== 'limpar') toast.success('Retorno agendado com sucesso!')
+      if (date) onClose()
     } catch (err: any) {
       toast.error('Erro ao agendar retorno.')
     } finally {
@@ -53,83 +74,133 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction }
     window.open(`https://wa.me/55${lead.phone.replace(/\D/g, '')}`, '_blank')
   }
 
+  const saveNote = async () => {
+    if (noteText.trim() === (lead.notes || '').trim()) return;
+    setIsUpdating(true)
+    try {
+      await onSaveNote(lead.id!, noteText)
+      toast.success('Anotação salva!')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const renderHistory = () => {
+    const logs = Array.isArray(lead.history_log) ? lead.history_log : []
+    return (
+      <div className="relative border-l-2 border-[#e5e7eb] ml-2 mt-4 space-y-6">
+        {logs.map((log: any, idx) => (
+          <div key={idx} className="relative pl-6">
+            <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[#f5f3ff] border-[3px] border-[#7c3aed]"></span>
+            <p className="text-[13px] text-[#374151] font-medium">{log.description || log.type}</p>
+            <p className="text-[12px] text-[#9ca3af]">{formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR })}</p>
+          </div>
+        ))}
+        {logs.length === 0 && (
+          <div className="relative pl-6">
+            <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[#f5f3ff] border-[3px] border-[#7c3aed]"></span>
+            <p className="text-[13px] text-[#374151]">Lead entrou na fila</p>
+            <p className="text-[12px] text-[#9ca3af]">{lead.created_at ? `há ${formatDistanceToNow(new Date(lead.created_at), { locale: ptBR })}` : 'agora mesmo'}</p>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
-    <div className="fixed inset-y-0 right-0 w-full md:w-[400px] bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col transform transition-transform duration-300">
+    <div className="fixed inset-y-0 right-0 w-full md:w-[450px] bg-white shadow-2xl border-l border-[#e5e7eb] z-50 flex flex-col transform transition-transform duration-300">
+      
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
-        <h2 className="text-lg font-bold text-gray-900 truncate pr-4">{lead.name}</h2>
-        <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-500">
+      <div className="flex items-start justify-between p-6 pb-4">
+        <div>
+          <h2 className="text-[22px] font-bold text-[#1a1d23] mb-2">{lead.name}</h2>
+          <div className="flex items-center gap-2">
+            {lead.gateway_status && (
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-[#f5f3ff] text-[#7c3aed]">
+                {lead.gateway_status.replace('_', ' ')}
+              </span>
+            )}
+            {lead.temperature === 'quente' && (
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-[#fff7ed] text-[#ea580c] flex items-center gap-1">
+                🔥 Quente
+              </span>
+            )}
+          </div>
+        </div>
+        <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-[#9ca3af]">
           <X className="w-5 h-5" />
         </button>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto px-6 pb-8 space-y-6">
         
-        {/* Contexto do Gateway */}
-        {lead.gateway_status && (
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertCircle className="w-4 h-4 text-gray-500" />
-              <span className="text-sm font-semibold text-gray-700">Status no Gateway</span>
+        {/* Alert Context */}
+        {lead.gateway_status === 'waiting_payment' && (
+          <div className="bg-[#f9fafb] rounded-lg p-4 border border-[#e5e7eb] flex items-start gap-3">
+            <div className="mt-0.5 text-[#7c3aed] bg-[#f5f3ff] p-1.5 rounded-full">
+              <Clock className="w-4 h-4" />
             </div>
-            <p className="text-xs text-gray-600 mb-1">
-              Gateway relatou <strong className="uppercase">{lead.gateway_status}</strong>.
-            </p>
-            {lead.reason && (
-              <p className="text-xs text-red-600 bg-red-50 p-2 rounded mt-2 border border-red-100">
-                {lead.reason}
-              </p>
-            )}
+            <div>
+              <span className="block text-[14px] font-bold text-[#1a1d23]">Pagamento ainda não identificado</span>
+              <span className="block text-[13px] text-[#6b7280]">Pix gerado há {lead.created_at ? formatDistanceToNow(new Date(lead.created_at), { locale: ptBR }) : ''}</span>
+            </div>
+          </div>
+        )}
+        {(lead.gateway_status === 'refused' || lead.status === 'perdido') && (
+          <div className="bg-[#fef2f2] rounded-lg p-4 border border-[#fecaca] flex items-start gap-3">
+            <div className="mt-0.5 text-[#ef4444] bg-white p-1.5 rounded-full">
+              <AlertCircle className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="block text-[14px] font-bold text-[#991b1b]">Pagamento recusado</span>
+              <span className="block text-[13px] text-[#b91c1c]">{lead.reason || 'O cartão não autorizou a transação.'}</span>
+            </div>
           </div>
         )}
 
-        {/* Info Pessoal */}
+        {/* Info Grid */}
         <div>
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Informações</h3>
-          <div className="space-y-3 text-sm text-gray-700">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Produto</span>
-              <span className="font-medium text-right">{lead.product_name || '-'}</span>
+          <h3 className="text-[13px] font-semibold text-[#6b7280] mb-3">Informações do cliente e produto</h3>
+          <div className="space-y-2.5 text-[14px] text-[#374151]">
+            <div className="flex items-center gap-3">
+              <Building className="w-4 h-4 text-[#9ca3af]" />
+              <span className="font-medium">{lead.product_name || '-'}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Valor</span>
-              <span className="font-medium">
-                {lead.gateway_metadata && (lead.gateway_metadata as any).amount 
-                  ? `R$ ${((lead.gateway_metadata as any).amount / 100).toFixed(2)}` 
-                  : '-'}
-              </span>
+            <div className="flex items-center gap-3">
+              <DollarSign className="w-4 h-4 text-[#9ca3af]" />
+              <span>R$ {lead.gateway_metadata && (lead.gateway_metadata as any).amount ? ((lead.gateway_metadata as any).amount / 100).toFixed(2) : '-'}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Pagamento</span>
-              <span className="font-medium uppercase">{lead.payment_method || '-'}</span>
+            <div className="flex items-center gap-3">
+              <QrCode className="w-4 h-4 text-[#9ca3af]" />
+              <span className="uppercase">{lead.payment_method || '-'}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Telefone</span>
-              <span className="font-medium">{lead.phone || '-'}</span>
+            <div className="flex items-center gap-3">
+              <Phone className="w-4 h-4 text-[#9ca3af]" />
+              <span>{lead.phone || '-'}</span>
             </div>
           </div>
         </div>
 
-        {/* CTA */}
+        {/* CTA Big WhatsApp */}
         <button 
           onClick={handleWhatsApp}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-500 text-white font-bold rounded-lg hover:bg-emerald-600 transition-colors shadow-sm"
+          className="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-[#10b981] hover:bg-[#059669] text-white font-bold rounded-lg transition-colors shadow-sm text-[15px]"
         >
-          <MessageCircle className="w-5 h-5" />
+          <MessageCircle className="w-[18px] h-[18px]" />
           Chamar {lead.name?.split(' ')[0]} no WhatsApp
         </button>
 
         {/* Status Form */}
         <div>
-          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-            Status do Atendimento
+          <label className="block text-[13px] font-semibold text-[#6b7280] mb-2">
+            Atendimento
           </label>
           <select 
             value={lead.status || 'novo'}
             onChange={handleStatusChange}
             disabled={isUpdating}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-700 font-medium disabled:opacity-50"
+            className="w-full px-4 py-2.5 bg-white border border-[#e5e7eb] rounded-lg focus:ring-2 focus:ring-[#7c3aed] focus:border-[#7c3aed] outline-none text-[#374151] font-medium transition-shadow appearance-none"
           >
             <option value="novo">Novo</option>
             <option value="em_atendimento">Em Atendimento</option>
@@ -138,34 +209,76 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction }
           </select>
         </div>
 
-        {/* Agendamento */}
+        {/* Anotação Rápida */}
         <div>
-          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
-            <CalendarClock className="w-4 h-4" />
-            Próxima Ação (Agendar Retorno)
+          <label className="block text-[13px] font-semibold text-[#6b7280] mb-2">
+            Anotação rápida
           </label>
-          {lead.next_action_at && (
-            <div className="text-xs text-emerald-600 font-medium mb-2 bg-emerald-50 p-2 rounded border border-emerald-100 flex justify-between items-center">
-              Retornar em: {new Date(lead.next_action_at).toLocaleString('pt-BR')}
-              <button onClick={() => handleSchedule('limpar')} className="text-red-500 hover:underline">Limpar</button>
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="relative">
+            <textarea
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="Ex.: Disse que fará o Pix depois do trabalho."
+              className="w-full px-4 py-3 bg-white border border-[#e5e7eb] rounded-lg focus:ring-2 focus:ring-[#7c3aed] outline-none text-[#374151] text-[14px] resize-none h-[100px]"
+              maxLength={500}
+            />
+            <span className="absolute bottom-3 right-3 text-[11px] text-[#9ca3af]">{noteText.length}/500</span>
+          </div>
+          <button 
+            onClick={saveNote}
+            disabled={isUpdating || noteText.trim() === (lead.notes || '').trim()}
+            className="mt-3 px-4 py-2 bg-[#f5f3ff] hover:bg-[#ede9fe] text-[#7c3aed] font-semibold text-[13px] rounded-lg transition-colors disabled:opacity-50"
+          >
+            Salvar anotação
+          </button>
+        </div>
+
+        {/* Agendamento / Próxima ação */}
+        <div>
+          <label className="block text-[13px] font-semibold text-[#6b7280] mb-2">
+            Próxima ação
+          </label>
+          
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
             <button 
               onClick={() => handleSchedule('hoje_18')}
               disabled={isUpdating}
-              className="px-3 py-2 text-xs font-medium bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-gray-700 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-[13px] font-semibold bg-white border border-[#e5e7eb] rounded-lg text-[#374151] hover:bg-gray-50 whitespace-nowrap"
             >
+              <CalendarClock className="w-4 h-4 text-[#9ca3af]" />
               Hoje, às 18h
             </button>
             <button 
               onClick={() => handleSchedule('amanha_manha')}
               disabled={isUpdating}
-              className="px-3 py-2 text-xs font-medium bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-gray-700 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-[13px] font-semibold bg-white border border-[#e5e7eb] rounded-lg text-[#374151] hover:bg-gray-50 whitespace-nowrap"
             >
-              Amanhã de manhã
+              <Calendar className="w-4 h-4 text-[#9ca3af]" />
+              Amanhã
+            </button>
+            <button 
+              onClick={() => handleSchedule('escolher')}
+              disabled={isUpdating}
+              className="flex items-center gap-2 px-3 py-2 text-[13px] font-semibold bg-white border border-[#e5e7eb] rounded-lg text-[#374151] hover:bg-gray-50 whitespace-nowrap"
+            >
+              <Clock className="w-4 h-4 text-[#9ca3af]" />
+              Escolher horário
             </button>
           </div>
+          {lead.next_action_at && (
+            <div className="mt-3 text-[12px] flex justify-between items-center text-[#10b981] font-semibold">
+              <span>Agendado para: {new Date(lead.next_action_at).toLocaleString('pt-BR')}</span>
+              <button onClick={() => handleSchedule('limpar')} className="text-[#ef4444] hover:underline">Limpar</button>
+            </div>
+          )}
+        </div>
+
+        {/* Histórico */}
+        <div>
+          <label className="block text-[13px] font-semibold text-[#6b7280] mb-1">
+            Histórico
+          </label>
+          {renderHistory()}
         </div>
 
       </div>

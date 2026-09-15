@@ -1,7 +1,7 @@
 import React from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { MessageCircle } from 'lucide-react'
+import { MessageCircle, MoreVertical } from 'lucide-react'
 import type { LeadRow } from '@/types/database.types'
 import toast from 'react-hot-toast'
 
@@ -22,65 +22,81 @@ export function InboxLeadCard({ lead, isSelected, onClick }: InboxLeadCardProps)
 
   const getTimeAgo = (dateStr?: string | null) => {
     if (!dateStr) return ''
-    return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale: ptBR })
+    return formatDistanceToNow(new Date(dateStr), { locale: ptBR })
   }
 
   // Cores da borda esquerda baseadas no status do CRM ou Gateway
-  let borderClass = 'border-l-indigo-500'
-  if (lead.gateway_status === 'refused' || lead.status === 'perdido') borderClass = 'border-l-red-500'
-  if (lead.gateway_status === 'waiting_payment' && lead.payment_method === 'pix') borderClass = 'border-l-purple-500'
-  if (lead.status === 'recuperado') borderClass = 'border-l-emerald-500'
+  let borderClass = 'border-l-[#7c3aed]' // Default purple (Pix)
+  let gatewayTagBg = 'bg-[#f5f3ff]'
+  let gatewayTagText = 'text-[#7c3aed]'
+
+  if (lead.gateway_status === 'refused' || lead.status === 'perdido') {
+    borderClass = 'border-l-[#ef4444]' // Red
+    gatewayTagBg = 'bg-[#fef2f2]'
+    gatewayTagText = 'text-[#ef4444]'
+  }
+  if (lead.gateway_status === 'checkout_abandoned') {
+    borderClass = 'border-l-[#f59e0b]' // Orange
+    gatewayTagBg = 'bg-[#fffbeb]'
+    gatewayTagText = 'text-[#f59e0b]'
+  }
+
+  const isNovo = lead.status === 'novo'
 
   return (
     <div 
       onClick={onClick}
-      className={`relative bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-l-4 ${borderClass} ${isSelected ? 'ring-2 ring-indigo-500' : ''}`}
+      className={`relative bg-white border rounded-[10px] shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:shadow-md transition-all cursor-pointer p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-l-4 ${borderClass} ${isSelected ? 'ring-2 ring-[#7c3aed] border-[#7c3aed]' : 'border-[#e5e7eb] border-l-4'}`}
     >
       <div className="flex-1">
         <div className="flex flex-wrap items-center gap-2 mb-1">
-          <h3 className="text-base font-bold text-gray-900">{lead.name}</h3>
+          <h3 className="text-[15px] font-bold text-[#1a1d23] mr-2">{lead.name}</h3>
           
           {/* Tags */}
           {lead.gateway_status && (
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-purple-700">
+            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${gatewayTagBg} ${gatewayTagText}`}>
               {lead.gateway_status.replace('_', ' ')}
             </span>
           )}
           {lead.temperature === 'quente' && (
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-orange-50 text-orange-700 flex items-center gap-1">
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-[#fff7ed] text-[#ea580c] flex items-center gap-1">
               🔥 Quente
             </span>
           )}
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700">
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-[#eff6ff] text-[#3b82f6]">
             {lead.status.replace('_', ' ')}
           </span>
         </div>
 
-        <div className="text-sm text-gray-500 mb-2">
+        <div className="text-[13px] text-[#6b7280] mb-2 leading-relaxed">
           {lead.product_name || 'Produto não identificado'} 
+          <br/>
           {lead.gateway_metadata && (lead.gateway_metadata as any).amount && (
-            <span className="font-medium text-gray-900"> • R$ {((lead.gateway_metadata as any).amount / 100).toFixed(2)}</span>
+            <span className="font-semibold text-[#1a1d23]">R$ {((lead.gateway_metadata as any).amount / 100).toFixed(2)}</span>
           )}
         </div>
 
-        <div className="text-xs text-gray-400 flex items-center gap-1">
-          {lead.created_at && <span>Entrou {getTimeAgo(lead.created_at)}</span>}
-          {lead.next_action_at && (
-            <>
-              <span>•</span>
-              <span className="text-emerald-600 font-medium">Retorno: {new Date(lead.next_action_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</span>
-            </>
+        <div className="text-[12px] text-[#9ca3af] flex items-center gap-1 mt-1">
+          {lead.gateway_status === 'waiting_payment' ? `Gerado há ${getTimeAgo(lead.created_at)}` : `Último contato há ${getTimeAgo(lead.updated_at)}`}
+          <span>·</span>
+          {lead.next_action_at ? (
+            <span>retorno {new Date(lead.next_action_at).toLocaleDateString() === new Date().toLocaleDateString() ? 'hoje às' : ''} {new Date(lead.next_action_at).toLocaleString('pt-BR', { timeStyle: 'short', dateStyle: new Date(lead.next_action_at).toLocaleDateString() !== new Date().toLocaleDateString() ? 'short' : undefined })}</span>
+          ) : (
+            <span>ainda não contatado</span>
           )}
         </div>
       </div>
 
-      <div>
+      <div className="flex items-center gap-3">
         <button 
           onClick={handleWhatsApp}
-          className="w-full md:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 text-white text-sm font-semibold rounded-lg hover:bg-emerald-600 transition-colors shadow-sm"
+          className={`w-full md:w-auto flex items-center justify-center gap-2 px-5 py-2 text-[13px] font-bold rounded-lg transition-colors shadow-sm ${isNovo ? 'bg-[#10b981] hover:bg-[#059669] text-white' : 'bg-white border border-[#10b981] text-[#10b981] hover:bg-green-50'}`}
         >
-          <MessageCircle className="w-4 h-4" />
-          {lead.status === 'novo' ? 'Chamar no WhatsApp' : 'Continuar conversa'}
+          <MessageCircle className="w-[18px] h-[18px]" />
+          {isNovo ? 'Chamar no WhatsApp' : 'Continuar conversa'}
+        </button>
+        <button className="text-[#9ca3af] hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition-colors" onClick={(e) => { e.stopPropagation(); }}>
+          <MoreVertical className="w-5 h-5" />
         </button>
       </div>
     </div>

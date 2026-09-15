@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, ChevronDown } from 'lucide-react'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { sellerService } from '@/services/seller.service'
@@ -41,7 +41,6 @@ export default function ColaboradorDashboard() {
     enabled: !!userId
   })
 
-  // Hook Customizado do WebSocket
   useLeadsRealtime(userId)
 
   const loading = loadingSession || (!!userId && loadingLeads)
@@ -52,7 +51,7 @@ export default function ColaboradorDashboard() {
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
 
   // Derived Data
-  const { filteredLeads, counts } = useMemo(() => {
+  const { filteredLeads, groupedLeads, counts } = useMemo(() => {
     let novos = 0
     let retornos = 0
     let em_atendimento = 0
@@ -75,8 +74,27 @@ export default function ColaboradorDashboard() {
       return true
     })
 
+    // Grouping by time (Agora = less than 2h old, Hoje = today)
+    const now = new Date()
+    const grouped = { agora: [] as any[], hoje: [] as any[], antigos: [] as any[] }
+    
+    filtered.forEach((l: any) => {
+      const dateToCompare = l.next_action_at ? new Date(l.next_action_at) : new Date(l.created_at || l.updated_at)
+      const diffMs = now.getTime() - dateToCompare.getTime()
+      const diffHours = diffMs / (1000 * 60 * 60)
+      
+      if (diffHours < 2 && diffHours >= -1) {
+        grouped.agora.push(l)
+      } else if (diffHours < 24 && diffHours >= -24) {
+        grouped.hoje.push(l)
+      } else {
+        grouped.antigos.push(l)
+      }
+    })
+
     return { 
       filteredLeads: filtered, 
+      groupedLeads: grouped,
       counts: { novos, retornos, em_atendimento, todos: myLeads.length } 
     }
   }, [myLeads, selectedTab])
@@ -130,12 +148,35 @@ export default function ColaboradorDashboard() {
     }
   })
 
+  const updateNoteMutation = useMutation({
+    mutationFn: ({ leadId, notes }: { leadId: string, notes: string }) => 
+      sellerService.updateNote(leadId, notes),
+    onMutate: async ({ leadId, notes }) => {
+      await queryClient.cancelQueries({ queryKey: ['seller_leads', userId] })
+      const previousLeads = queryClient.getQueryData(['seller_leads', userId])
+      queryClient.setQueryData(['seller_leads', userId], (old: any) => 
+        old?.map((l: any) => l.id === leadId ? { ...l, notes } : l)
+      )
+      return { previousLeads }
+    },
+    onError: (err, variables, context) => {
+      toast.error('Falha ao salvar anotação.')
+      if (context?.previousLeads) {
+        queryClient.setQueryData(['seller_leads', userId], context.previousLeads)
+      }
+    }
+  })
+
   const handleStatusChange = async (leadId: string, newStatus: string) => {
     await updateStatusMutation.mutateAsync({ leadId, newStatus })
   }
 
   const handleScheduleAction = async (leadId: string, nextActionAt: string | null) => {
     await updateScheduleMutation.mutateAsync({ leadId, nextActionAt })
+  }
+
+  const handleSaveNote = async (leadId: string, notes: string) => {
+    await updateNoteMutation.mutateAsync({ leadId, notes })
   }
 
   if (loading) {
@@ -149,10 +190,10 @@ export default function ColaboradorDashboard() {
   const selectedLeadData = myLeads.find((l: any) => l.id === selectedLeadId) || null
 
   return (
-    <div className="space-y-6 pb-12">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Minha Fila</h1>
-        <p className="text-gray-500 mt-1">Leads que precisam da sua atenção agora.</p>
+    <div className="max-w-[1200px] w-full mx-auto space-y-6 pb-12">
+      <div className="hidden md:block">
+        <h1 className="text-[28px] font-bold text-[#1a1d23]">Minha fila</h1>
+        <p className="text-[#6b7280] mt-1 text-[15px]">Leads que precisam da sua atenção agora.</p>
       </div>
 
       {!isActive ? (
@@ -174,46 +215,83 @@ export default function ColaboradorDashboard() {
         recuperados={0}
       />
 
-      {/* TABS de Filtro */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        <button 
-          onClick={() => setSelectedTab('todos')}
-          className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${selectedTab === 'todos' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}`}
-        >
-          Todos ({counts.todos})
-        </button>
-        <button 
-          onClick={() => setSelectedTab('novo')}
-          className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${selectedTab === 'novo' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}`}
-        >
-          Novos ({counts.novos})
-        </button>
-        <button 
-          onClick={() => setSelectedTab('em_atendimento')}
-          className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${selectedTab === 'em_atendimento' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}`}
-        >
-          Em atendimento ({counts.em_atendimento})
-        </button>
-        <button 
-          onClick={() => setSelectedTab('retornos')}
-          className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${selectedTab === 'retornos' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}`}
-        >
-          Retornos ({counts.retornos})
-        </button>
+      {/* TABS e Sort */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap gap-2">
+          <button 
+            onClick={() => setSelectedTab('todos')}
+            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${selectedTab === 'todos' ? 'bg-[#7c3aed] text-white shadow-sm' : 'bg-white border border-[#e5e7eb] text-[#374151] hover:bg-gray-50'}`}
+          >
+            Todos ({counts.todos})
+          </button>
+          <button 
+            onClick={() => setSelectedTab('novo')}
+            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${selectedTab === 'novo' ? 'bg-[#7c3aed] text-white shadow-sm' : 'bg-white border border-[#e5e7eb] text-[#374151] hover:bg-gray-50'}`}
+          >
+            Novos ({counts.novos})
+          </button>
+          <button 
+            onClick={() => setSelectedTab('em_atendimento')}
+            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${selectedTab === 'em_atendimento' ? 'bg-[#7c3aed] text-white shadow-sm' : 'bg-white border border-[#e5e7eb] text-[#374151] hover:bg-gray-50'}`}
+          >
+            Em atendimento ({counts.em_atendimento})
+          </button>
+          <button 
+            onClick={() => setSelectedTab('retornos')}
+            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${selectedTab === 'retornos' ? 'bg-[#7c3aed] text-white shadow-sm' : 'bg-white border border-[#e5e7eb] text-[#374151] hover:bg-gray-50'}`}
+          >
+            Retornos ({counts.retornos})
+          </button>
+        </div>
+        <div className="hidden md:flex items-center gap-1 text-[#6b7280] text-sm font-medium cursor-pointer hover:text-gray-900">
+          Mais recentes
+          <ChevronDown className="w-4 h-4" />
+        </div>
       </div>
 
-      {/* Inbox List */}
-      <div className="flex flex-col gap-4">
-        {filteredLeads.map((lead: any) => (
-          <InboxLeadCard 
-            key={lead.id} 
-            lead={lead} 
-            isSelected={selectedLeadId === lead.id}
-            onClick={() => setSelectedLeadId(lead.id)}
-          />
-        ))}
+      {/* Inbox List Grouped */}
+      <div className="flex flex-col gap-8">
+        {groupedLeads.agora.length > 0 && (
+          <div>
+            <h4 className="text-[15px] font-bold text-[#374151] mb-3">Agora</h4>
+            <div className="flex flex-col gap-3">
+              {groupedLeads.agora.map((lead: any) => (
+                <InboxLeadCard 
+                  key={lead.id} lead={lead} isSelected={selectedLeadId === lead.id} onClick={() => setSelectedLeadId(lead.id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {groupedLeads.hoje.length > 0 && (
+          <div>
+            <h4 className="text-[15px] font-bold text-[#374151] mb-3">Hoje</h4>
+            <div className="flex flex-col gap-3">
+              {groupedLeads.hoje.map((lead: any) => (
+                <InboxLeadCard 
+                  key={lead.id} lead={lead} isSelected={selectedLeadId === lead.id} onClick={() => setSelectedLeadId(lead.id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {groupedLeads.antigos.length > 0 && (
+          <div>
+            <h4 className="text-[15px] font-bold text-[#374151] mb-3">Anteriores</h4>
+            <div className="flex flex-col gap-3">
+              {groupedLeads.antigos.map((lead: any) => (
+                <InboxLeadCard 
+                  key={lead.id} lead={lead} isSelected={selectedLeadId === lead.id} onClick={() => setSelectedLeadId(lead.id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {filteredLeads.length === 0 && (
-          <div className="text-center p-12 bg-gray-50 rounded-xl border border-dashed border-gray-200 text-gray-500">
+          <div className="text-center p-12 bg-white rounded-xl border border-dashed border-[#e5e7eb] text-[#6b7280]">
             Nenhum lead nesta aba.
           </div>
         )}
@@ -227,6 +305,7 @@ export default function ColaboradorDashboard() {
           onClose={() => setSelectedLeadId(null)} 
           onUpdateStatus={handleStatusChange}
           onScheduleAction={handleScheduleAction}
+          onSaveNote={handleSaveNote}
         />
       </div>
     </div>
