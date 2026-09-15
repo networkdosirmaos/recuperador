@@ -45,6 +45,24 @@ export function useLeadsRealtime(userId: string | undefined) {
           })
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'leads',
+          filter: `current_assignee_id=eq.${userId}`
+        },
+        (payload) => {
+          console.log('LEAD ATUALIZADO!', payload.new)
+          const atualizadoLead = payload.new as MyLead
+          
+          queryClient.setQueryData(['seller_leads', userId], (oldData: MyLead[] | undefined) => {
+            if (!oldData) return []
+            return oldData.map(l => l.id === atualizadoLead.id ? { ...l, ...atualizadoLead } : l)
+          })
+        }
+      )
       .subscribe()
 
     return () => {

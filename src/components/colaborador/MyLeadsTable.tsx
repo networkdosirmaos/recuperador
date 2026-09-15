@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Phone, Mail, Inbox, Flame, ThermometerSun, AlertTriangle, Info, CreditCard, QrCode, FileText } from 'lucide-react'
 import { LeadDetailsModal } from '../LeadDetailsModal'
 import type { LeadRow } from '@/types/database.types'
+import toast from 'react-hot-toast'
 
 export type MyLead = Partial<LeadRow> & Pick<LeadRow, 'id' | 'name' | 'phone' | 'email' | 'status' | 'updated_at'>
 
@@ -78,7 +79,7 @@ export function MyLeadsTable({ leads, onStatusChange, heatSettings, operatorConf
   }
 
   const handleWhatsApp = (phone: string | null) => {
-    if (!phone) return alert('Cliente sem número de telefone.')
+    if (!phone) return toast.error('Cliente sem número de telefone.')
     const cleanPhone = phone.replace(/\D/g, '')
     window.open(`https://wa.me/55${cleanPhone}`, '_blank')
   }

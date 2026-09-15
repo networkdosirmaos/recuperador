@@ -9,6 +9,7 @@ import { LeadDetailsModal } from '@/components/LeadDetailsModal'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminService } from '@/services/admin.service'
 import type { LeadRow, ProfileRow } from '@/types/database.types'
+import toast from 'react-hot-toast'
 
 function BaseDeLeadsContent() {
   const searchParams = useSearchParams()
@@ -70,13 +71,14 @@ function BaseDeLeadsContent() {
       adminService.assignMultipleLeads(leadIds, collabId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin_leads'] })
+      queryClient.invalidateQueries({ queryKey: ['admin_collaborators'] })
       setTransferModal({ isOpen: false, leadId: null })
       setSelectedLeads([])
-      alert('Leads transferidos com sucesso!')
+      toast.success('Leads transferidos com sucesso!')
     },
-    onError: (err) => {
+    onError: (err: any) => {
       console.error(err)
-      alert('Erro ao transferir leads.')
+      toast.error('Erro ao transferir leads.')
     }
   })
 
@@ -88,11 +90,11 @@ function BaseDeLeadsContent() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin_leads'] })
       setSelectedLeads([])
-      alert('Leads excluídos com sucesso!')
+      toast.success('Leads excluídos com sucesso!')
     },
-    onError: (err) => {
+    onError: (err: any) => {
       console.error(err)
-      alert('Erro ao excluir leads.')
+      toast.error('Erro ao excluir leads.')
     }
   })
 

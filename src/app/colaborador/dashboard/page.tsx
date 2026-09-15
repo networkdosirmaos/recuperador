@@ -8,6 +8,7 @@ import { AlertCircle } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { sellerService } from '@/services/seller.service'
 import { useLeadsRealtime } from '@/hooks/useLeadsRealtime'
+import toast from 'react-hot-toast'
 
 export default function ColaboradorDashboard() {
   const queryClient = useQueryClient()
@@ -60,14 +61,15 @@ export default function ColaboradorDashboard() {
     mutationFn: (listId: string) => sellerService.pullLeads(userId!, listId),
     onSuccess: (count) => {
       if (count === 0) {
-        alert('Não há leads novos disponíveis nesta lista.')
+        toast.error('Não há leads novos disponíveis nesta lista.')
       } else {
         queryClient.invalidateQueries({ queryKey: ['seller_leads', userId] })
+        toast.success(`${count} lead(s) puxado(s)!`)
       }
     },
     onError: (error) => {
       console.error(error)
-      alert('Erro inesperado ao puxar leads.')
+      toast.error('Erro inesperado ao puxar leads.')
     }
   })
 
@@ -95,7 +97,7 @@ export default function ColaboradorDashboard() {
       }
     },
     onError: (err, variables, context) => {
-      alert('Falha ao atualizar o status.')
+      toast.error('Falha ao atualizar o status.')
       if (context?.previousLeads) {
         queryClient.setQueryData(['seller_leads', userId], context.previousLeads)
       }

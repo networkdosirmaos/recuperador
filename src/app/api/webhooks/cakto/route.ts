@@ -3,6 +3,19 @@ import { coreLeadService } from '@/services/coreLead.service'
 
 export async function POST(req: Request) {
   try {
+    // FASE 4: BLINDAGEM DO WEBHOOK (Validação de Token)
+    const secret = process.env.CAKTO_WEBHOOK_SECRET;
+    if (secret) {
+      // Diferentes gateways usam headers diferentes. Cobrimos os mais comuns.
+      const authHeader = req.headers.get('authorization') || req.headers.get('x-webhook-secret') || req.headers.get('x-cakto-signature') || req.headers.get('token');
+      if (authHeader !== secret && authHeader !== `Bearer ${secret}`) {
+        console.error('Tentativa de invasão no webhook bloqueada. IP:', req.headers.get('x-forwarded-for'));
+        return NextResponse.json({ error: 'Acesso Negado. Token de segurança inválido.' }, { status: 401 });
+      }
+    } else {
+      console.warn('⚠️ AVISO: CAKTO_WEBHOOK_SECRET não está configurado nas variáveis de ambiente. Endpoint vulnerável.');
+    }
+
     let body;
     const rawText = await req.text()
     try {
