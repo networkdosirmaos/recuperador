@@ -432,8 +432,8 @@ function BaseDeLeadsContent() {
       {transferModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Transferir Lead</h3>
-            <p className="text-sm text-gray-500 mb-4">Selecione o vendedor que irá assumir este cliente.</p>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Transferir Leads</h3>
+            <p className="text-sm text-gray-500 mb-4">Selecione o vendedor que irá assumir {selectedLeads.length > 1 ? `estes ${selectedLeads.length} clientes` : 'este cliente'}.</p>
             
             <select 
               value={selectedCollaborator || 'none'}
@@ -457,10 +457,10 @@ function BaseDeLeadsContent() {
               </button>
               <button 
                 onClick={handleTransfer}
-                disabled={assignLeadMutation.isPending}
+                disabled={assignMultipleLeadsMutation.isPending}
                 className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50"
               >
-                {assignLeadMutation.isPending ? 'Transferindo...' : 'Confirmar Transferência'}
+                {assignMultipleLeadsMutation.isPending ? 'Transferindo...' : 'Confirmar Transferência'}
               </button>
             </div>
           </div>
