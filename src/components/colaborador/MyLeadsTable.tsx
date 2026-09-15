@@ -143,25 +143,32 @@ export function MyLeadsTable({ leads, onStatusChange, heatSettings, operatorConf
                   return (
                     <tr key={lead.id} className={`transition-colors ${rowColor}`}>
                       <td className="px-6 py-4">
-                        <div className={`font-medium text-base ${nameColor}`}>{lead.name}</div>
-                        
-                        <div className="flex items-center gap-2 mt-1">
-                          {heat === 'super_quente' && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
-                              🔥 SUPER QUENTE
-                            </span>
-                          )}
-                          {heat === 'quente' && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-200">
-                              🔥 QUENTE
-                            </span>
-                          )}
-                          {config.show_gateway_updated_at && (
-                            <p className="text-[10px] text-gray-400 font-medium">
-                              {lead.gateway_updated_at ? new Date(lead.gateway_updated_at).toLocaleDateString('pt-BR') : ''}
-                            </p>
-                          )}
-                        </div>
+                        <button 
+                          onClick={() => setSelectedLead(lead)}
+                          className="text-left group focus:outline-none w-full"
+                        >
+                          <div className={`font-semibold text-base ${nameColor} group-hover:text-indigo-600 transition-colors underline decoration-indigo-200 underline-offset-2`}>
+                            {lead.name}
+                          </div>
+                          
+                          <div className="flex items-center gap-2 mt-1">
+                            {heat === 'super_quente' && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
+                                🔥 SUPER QUENTE
+                              </span>
+                            )}
+                            {heat === 'quente' && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-200">
+                                🔥 QUENTE
+                              </span>
+                            )}
+                            {config.show_gateway_updated_at && (
+                              <p className="text-[10px] text-gray-400 font-medium">
+                                {lead.gateway_updated_at ? new Date(lead.gateway_updated_at).toLocaleDateString('pt-BR') : ''}
+                              </p>
+                            )}
+                          </div>
+                        </button>
                       </td>
                       <td className="px-6 py-4 space-y-1">
                         {config.show_product && (
@@ -188,18 +195,10 @@ export function MyLeadsTable({ leads, onStatusChange, heatSettings, operatorConf
                         <div className="flex flex-col gap-2">
                           <button
                             onClick={() => handleWhatsApp(lead.phone)}
-                            className="flex items-center justify-center w-full px-3 py-1.5 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors"
+                            className="flex items-center justify-center w-full px-3 py-1.5 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors shadow-sm"
                           >
                             <Phone className="w-4 h-4 mr-1.5" />
                             WhatsApp
-                          </button>
-                          
-                          <button
-                            onClick={() => setSelectedLead(lead)}
-                            className="flex items-center justify-center w-full px-3 py-1.5 bg-white text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors border border-gray-200 shadow-sm"
-                          >
-                            <Info className="w-4 h-4 mr-1.5 text-indigo-600" />
-                            Ver Ficha
                           </button>
                         </div>
                       </td>

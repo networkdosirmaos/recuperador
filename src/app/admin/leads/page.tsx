@@ -37,9 +37,11 @@ function BaseDeLeadsContent() {
     origin: true,
     payment: true,
     gateway_status: true,
-    gateway_event: false,
-    reason: false,
-    gateway_updated_at: false
+    gateway_event: true,
+    reason: true,
+    gateway_updated_at: true,
+    crm_status: true,
+    seller: true
   });
 
   // Queries
@@ -62,17 +64,18 @@ function BaseDeLeadsContent() {
   const searching = isFetching;
 
   // Mutations
-  const assignLeadMutation = useMutation({
-    mutationFn: ({ leadId, collabId }: { leadId: string, collabId: string | null }) => 
-      adminService.assignLead(leadId, collabId),
+  const assignMultipleLeadsMutation = useMutation({
+    mutationFn: ({ leadIds, collabId }: { leadIds: string[], collabId: string | null }) => 
+      adminService.assignMultipleLeads(leadIds, collabId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin_leads'] })
       setTransferModal({ isOpen: false, leadId: null })
-      alert('Lead transferido com sucesso!')
+      setSelectedLeads([])
+      alert('Leads transferidos com sucesso!')
     },
     onError: (err) => {
       console.error(err)
-      alert('Erro ao transferir lead.')
+      alert('Erro ao transferir leads.')
     }
   })
 
@@ -114,9 +117,9 @@ function BaseDeLeadsContent() {
   // ==========================
 
   const handleTransfer = () => {
-    if (!transferModal.leadId) return
-    assignLeadMutation.mutate({ 
-      leadId: transferModal.leadId, 
+    if (selectedLeads.length === 0) return
+    assignMultipleLeadsMutation.mutate({ 
+      leadIds: selectedLeads, 
       collabId: selectedCollaborator === 'none' ? null : selectedCollaborator 
     })
   }
@@ -257,26 +260,42 @@ function BaseDeLeadsContent() {
             <input type="checkbox" checked={showColumns.gateway_updated_at} onChange={(e) => setShowColumns({...showColumns, gateway_updated_at: e.target.checked})} className="rounded text-indigo-600 focus:ring-indigo-500" />
             <span className="text-sm text-gray-700">Data Gateway</span>
           </label>
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input type="checkbox" checked={showColumns.crm_status} onChange={(e) => setShowColumns({...showColumns, crm_status: e.target.checked})} className="rounded text-indigo-600 focus:ring-indigo-500" />
+            <span className="text-sm text-gray-700">Status CRM</span>
+          </label>
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input type="checkbox" checked={showColumns.seller} onChange={(e) => setShowColumns({...showColumns, seller: e.target.checked})} className="rounded text-indigo-600 focus:ring-indigo-500" />
+            <span className="text-sm text-gray-700">Vendedor Atual</span>
+          </label>
         </div>
       </div>
 
       {/* BARRA DE AÇÃO EM MASSA */}
       {selectedLeads.length > 0 && (
-        <div className="bg-red-50 border border-red-100 rounded-xl p-4 flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-bottom-4">
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-center justify-between shadow-xl animate-in fade-in slide-in-from-bottom-4 sticky top-4 z-50">
           <div className="flex items-center gap-3">
-            <div className="bg-red-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shadow-sm">
+            <div className="bg-indigo-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shadow-sm">
               {selectedLeads.length}
             </div>
-            <span className="text-red-900 font-medium">leads selecionados para exclusão</span>
+            <span className="text-gray-100 font-medium">leads selecionados</span>
           </div>
-          <button 
-            onClick={handleDeleteSelected}
-            disabled={deleteLeadsMutation.isPending}
-            className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors shadow-sm"
-          >
-            {deleteLeadsMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
-            Apagar Definitivamente
-          </button>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setTransferModal({ isOpen: true, leadId: null })}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+            >
+              Transferir
+            </button>
+            <button 
+              onClick={handleDeleteSelected}
+              disabled={deleteLeadsMutation.isPending}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600/90 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors shadow-sm"
+            >
+              {deleteLeadsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              Excluir
+            </button>
+          </div>
         </div>
       )}
 
@@ -305,9 +324,8 @@ function BaseDeLeadsContent() {
                   {showColumns.gateway_event && <th className="p-4">Evento</th>}
                   {showColumns.reason && <th className="p-4">Motivo</th>}
                   {showColumns.gateway_updated_at && <th className="p-4">Data Gateway</th>}
-                  <th className="p-4">Status CRM</th>
-                  <th className="p-4">Vendedor Atual</th>
-                  <th className="p-4 sticky right-0 bg-gray-50 shadow-[inset_1px_0_0_rgba(0,0,0,0.1)]">Ação</th>
+                  {showColumns.crm_status && <th className="p-4">Status CRM</th>}
+                  {showColumns.seller && <th className="p-4">Vendedor Atual</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -322,9 +340,14 @@ function BaseDeLeadsContent() {
                       />
                     </td>
                     <td className="p-4">
-                      <div className="font-medium text-gray-900">{lead.name}</div>
-                      <div className="text-xs text-gray-500">{lead.email || lead.phone || 'Sem contato'}</div>
-                      <div className="text-[10px] text-gray-400 mt-1">{new Date(lead.created_at).toLocaleString('pt-BR')}</div>
+                      <button 
+                        onClick={() => setSelectedLead(lead)}
+                        className="text-left group focus:outline-none"
+                      >
+                        <div className="font-semibold text-indigo-600 group-hover:text-indigo-800 transition-colors underline decoration-indigo-200 underline-offset-2">{lead.name}</div>
+                        <div className="text-xs text-gray-500 mt-1">{lead.email || lead.phone || 'Sem contato'}</div>
+                        <div className="text-[10px] text-gray-400 mt-0.5">{new Date(lead.created_at).toLocaleString('pt-BR')}</div>
+                      </button>
                     </td>
                     <td className="p-4">
                       <div className="text-sm font-medium text-gray-900">{lead.product_name || 'N/A'}</div>
@@ -364,41 +387,25 @@ function BaseDeLeadsContent() {
                         {lead.gateway_updated_at ? new Date(lead.gateway_updated_at).toLocaleString('pt-BR') : '-'}
                       </td>
                     )}
-                    <td className="p-4">
-                      <div className="mb-1">{getStatusBadge(lead.status)}</div>
-                    </td>
-                    <td className="p-4">
-                      {lead.current_assignee_id ? (
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                          <span className="text-sm font-medium text-gray-900">
-                            {collaborators.find((c: any) => c.id === lead.current_assignee_id)?.full_name || 'Vendedor'}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-400 font-medium">Sem dono</span>
-                      )}
-                    </td>
-                    <td className="p-4 sticky right-0 bg-gray-50 shadow-[inset_1px_0_0_rgba(0,0,0,0.1)]">
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => setSelectedLead(lead)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded hover:bg-black transition-colors"
-                        >
-                          <Info className="w-3.5 h-3.5" />
-                          Ficha
-                        </button>
-                        <button 
-                          onClick={() => {
-                            setSelectedCollaborator(lead.current_assignee_id || 'none')
-                            setTransferModal({ isOpen: true, leadId: lead.id })
-                          }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded hover:bg-indigo-100 transition-colors border border-indigo-200"
-                        >
-                          Transferir
-                        </button>
-                      </div>
-                    </td>
+                    {showColumns.crm_status && (
+                      <td className="p-4">
+                        <div className="mb-1">{getStatusBadge(lead.status)}</div>
+                      </td>
+                    )}
+                    {showColumns.seller && (
+                      <td className="p-4">
+                        {lead.current_assignee_id ? (
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span className="text-sm font-medium text-gray-900">
+                              {collaborators.find((c: any) => c.id === lead.current_assignee_id)?.full_name || 'Vendedor'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400 font-medium">Sem dono</span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {leads.length === 0 && (

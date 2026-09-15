@@ -61,6 +61,18 @@ export const adminService = {
     if (error) throw error
   },
 
+  async assignMultipleLeads(leadIds: string[], collaboratorId: string | null) {
+    const { error } = await supabase
+      .from('leads')
+      .update({ 
+        current_assignee_id: collaboratorId, 
+        updated_at: new Date().toISOString() 
+      })
+      .in('id', leadIds)
+    
+    if (error) throw error
+  },
+
   async deleteLeads(leadIds: string[]) {
     const { error } = await supabase
       .from('leads')
