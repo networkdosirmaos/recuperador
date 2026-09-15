@@ -1,10 +1,16 @@
 "use client"
 
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useState, Suspense } from 'react'
+import { useState, useMemo, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Users, Search, Filter, Loader2, Info, CreditCard, QrCode, FileText, Trash2 } from 'lucide-react'
 import { LeadDetailsModal } from '@/components/LeadDetailsModal'
+
+// Componentes extraídos (Fase 7)
+import { AdminFilters } from './components/AdminFilters'
+import { AdminTable } from './components/AdminTable'
+import { AdminBulkActions } from './components/AdminBulkActions'
+import { AdminTransferModal } from './components/AdminTransferModal'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminService } from '@/services/admin.service'
