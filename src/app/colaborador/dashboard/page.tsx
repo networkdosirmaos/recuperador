@@ -57,8 +57,10 @@ export default function ColaboradorDashboard() {
     let em_atendimento = 0
     let recuperados_count = 0
 
+    const isApproved = (l: any) => l.status === 'recuperado' || l.gateway_event === 'purchase_approved' || l.gateway_status === 'approved'
+
     myLeads.forEach((l: any) => {
-      if (l.status === 'recuperado') {
+      if (isApproved(l)) {
         recuperados_count++
       } else if (l.next_action_at) {
         retornos++
@@ -70,11 +72,11 @@ export default function ColaboradorDashboard() {
     })
 
     const filtered = myLeads.filter((l: any) => {
-      if (selectedTab === 'todos') return l.status !== 'recuperado'
-      if (selectedTab === 'recuperados') return l.status === 'recuperado'
-      if (selectedTab === 'retornos') return !!l.next_action_at && l.status !== 'recuperado'
-      if (selectedTab === 'novo') return !l.next_action_at && l.status === 'novo'
-      if (selectedTab === 'em_atendimento') return !l.next_action_at && l.status === 'em_atendimento'
+      if (selectedTab === 'todos') return !isApproved(l)
+      if (selectedTab === 'recuperados') return isApproved(l)
+      if (selectedTab === 'retornos') return !!l.next_action_at && !isApproved(l)
+      if (selectedTab === 'novo') return !l.next_action_at && l.status === 'novo' && !isApproved(l)
+      if (selectedTab === 'em_atendimento') return !l.next_action_at && l.status === 'em_atendimento' && !isApproved(l)
       return true
     })
 
