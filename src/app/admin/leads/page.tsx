@@ -8,6 +8,7 @@ import { LeadDetailsModal } from '@/components/LeadDetailsModal'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminService } from '@/services/admin.service'
+import type { LeadRow, ProfileRow } from '@/types/database.types'
 
 function BaseDeLeadsContent() {
   const searchParams = useSearchParams()
@@ -329,7 +330,7 @@ function BaseDeLeadsContent() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {leads.map((lead: any) => (
+                {leads.map((lead: LeadRow) => (
                   <tr key={lead.id} className={`transition-colors ${selectedLeads.includes(lead.id) ? 'bg-indigo-50/50' : 'hover:bg-gray-50'}`}>
                     <td className="p-4">
                       <input 
@@ -441,7 +442,7 @@ function BaseDeLeadsContent() {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-700 mb-4"
             >
               <option value="none">-- Sem dono (Remover da Fila) --</option>
-              {collaborators.map((c: any) => (
+              {collaborators.map((c: Partial<ProfileRow> & { id: string }) => (
                 <option key={c.id} value={c.id}>
                   {c.full_name || c.email} {c.is_active ? '(Ativo)' : '(Pausado)'}
                 </option>

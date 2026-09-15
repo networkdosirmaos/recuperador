@@ -1,24 +1,9 @@
 import { useState } from 'react'
 import { Phone, Mail, Inbox, Flame, ThermometerSun, AlertTriangle, Info, CreditCard, QrCode, FileText } from 'lucide-react'
 import { LeadDetailsModal } from '../LeadDetailsModal'
+import type { LeadRow } from '@/types/database.types'
 
-export type MyLead = {
-  id: string
-  name: string
-  phone: string | null
-  email: string | null
-  status: string
-  temperature?: string
-  gateway?: string
-  gateway_updated_at?: string
-  updated_at: string
-  product_name?: string
-  payment_method?: string
-  gateway_status?: string
-  reason?: string
-  gateway_event?: string
-  created_at?: string
-}
+export type MyLead = Partial<LeadRow> & Pick<LeadRow, 'id' | 'name' | 'phone' | 'email' | 'status' | 'updated_at'>
 
 interface HeatSettings {
   super_hot_days: number
