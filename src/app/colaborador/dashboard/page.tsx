@@ -48,7 +48,7 @@ export default function ColaboradorDashboard() {
   const isActive = profile?.is_active !== false
 
   // UI States
-  const [selectedTab, setSelectedTab] = useState<'todos' | 'novo' | 'em_atendimento' | 'retornos' | 'recuperados'>('todos')
+  const [selectedTab, setSelectedTab] = useState<'pendentes' | 'em_andamento' | 'fechados'>('pendentes')
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
   
   // Relógio Fantasma (atualiza a cada 30 segundos)
@@ -60,10 +60,9 @@ export default function ColaboradorDashboard() {
 
   // Derived Data
   const { filteredLeads, groupedLeads, counts } = useMemo(() => {
-    let novos = 0
-    let retornos = 0
-    let em_atendimento = 0
-    let recuperados_count = 0
+    let pendentes_count = 0
+    let em_andamento_count = 0
+    let fechados_count = 0
     let coolingDown_count = 0
 
     const isApproved = (l: any) => l.status === 'recuperado' || l.gateway_event === 'purchase_approved' || l.gateway_status === 'approved'
@@ -71,30 +70,30 @@ export default function ColaboradorDashboard() {
       const isPixEvent = l.gateway_event === 'pix_generated' || l.gateway_event === 'pix_gerado' || l.gateway_event === 'waiting_payment';
       return isPixEvent && l.status === 'novo' && (nowTick - new Date(l.updated_at || l.created_at).getTime() < 6 * 60 * 1000);
     }
+    const isPastDue = (l: any) => l.next_action_at && new Date(l.next_action_at).getTime() <= nowTick
+    const isFuture = (l: any) => l.next_action_at && new Date(l.next_action_at).getTime() > nowTick
+
+    const getBucket = (l: any) => {
+      if (isApproved(l)) return 'fechados'
+      if (isCoolingDown(l)) return 'geladeira'
+      // Se é novo OU o retorno está vencido -> PENDENTES (Fogo)
+      if (l.status === 'novo' || isPastDue(l)) return 'pendentes'
+      // O resto (em_atendimento sem data, ou com retorno no futuro) -> EM ANDAMENTO
+      return 'em_andamento'
+    }
 
     myLeads.forEach((l: any) => {
-      if (isApproved(l)) {
-        recuperados_count++
-      } else if (isCoolingDown(l)) {
-        coolingDown_count++
-      } else if (l.next_action_at) {
-        retornos++
-      } else if (l.status === 'novo') {
-        novos++
-      } else if (l.status === 'em_atendimento') {
-        em_atendimento++
-      }
+      const bucket = getBucket(l)
+      if (bucket === 'fechados') fechados_count++
+      else if (bucket === 'geladeira') coolingDown_count++
+      else if (bucket === 'pendentes') pendentes_count++
+      else if (bucket === 'em_andamento') em_andamento_count++
     })
 
     const filtered = myLeads.filter((l: any) => {
-      if (isApproved(l)) return selectedTab === 'recuperados'
-      if (isCoolingDown(l)) return false
-
-      if (selectedTab === 'todos') return true
-      if (selectedTab === 'retornos') return !!l.next_action_at
-      if (selectedTab === 'novo') return !l.next_action_at && l.status === 'novo'
-      if (selectedTab === 'em_atendimento') return !l.next_action_at && l.status === 'em_atendimento'
-      return false
+      const bucket = getBucket(l)
+      if (bucket === 'geladeira') return false
+      return bucket === selectedTab
     })
 
     // Grouping by time (Agora = less than 2h old, Hoje = today)
@@ -118,12 +117,11 @@ export default function ColaboradorDashboard() {
       filteredLeads: filtered, 
       groupedLeads: grouped,
       counts: { 
-        novos, 
-        retornos, 
-        em_atendimento, 
-        recuperados: recuperados_count, 
+        pendentes: pendentes_count, 
+        em_andamento: em_andamento_count, 
+        fechados: fechados_count, 
         coolingDown: coolingDown_count,
-        todos: myLeads.length - recuperados_count - coolingDown_count 
+        todos_ativos: pendentes_count + em_andamento_count 
       } 
     }
   }, [myLeads, selectedTab, nowTick])
@@ -242,63 +240,65 @@ export default function ColaboradorDashboard() {
       ) : null}
 
       {counts.coolingDown > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center gap-3 animate-pulse">
-          <div className="bg-white p-1.5 rounded-full shadow-sm text-blue-600">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          </div>
+        <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-xl flex items-center gap-3 animate-pulse">
+          <span className="text-xl">⏳</span>
           <div>
-            <p className="text-[14px] font-semibold text-blue-900">
-              Você tem {counts.coolingDown} {counts.coolingDown === 1 ? 'lead aguardando' : 'leads aguardando'} pagamento de Pix...
-            </p>
-            <p className="text-[12px] text-blue-700">Eles aparecerão na sua fila automaticamente caso não paguem nos próximos minutos.</p>
+            <p className="font-bold text-sm">Você tem {counts.coolingDown} lead(s) aguardando pagamento de Pix.</p>
+            <p className="text-xs opacity-90 mt-0.5">Eles aparecerão na sua fila automaticamente caso o prazo expire sem pagamento.</p>
           </div>
         </div>
       )}
 
+      {/* HEADER */}
+      <div className="mb-6">
+        <h1 className="text-[26px] font-bold text-[#1a1d23] mb-1 tracking-tight">Minha fila</h1>
+        <p className="text-[#6b7280] text-[15px]">O que você precisa atacar agora.</p>
+      </div>
+
+      {/* KPIs */}
       <InboxKPIs 
-        novos={counts.novos} 
-        retornos={counts.retornos} 
-        recuperados={counts.recuperados}
+        pendentes={counts.pendentes} 
+        emAndamento={counts.em_andamento} 
+        fechados={counts.fechados}
         animate={isAnimating}
       />
 
       {/* TABS e Sort */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex flex-wrap gap-2">
-          <button 
-            onClick={() => setSelectedTab('todos')}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${selectedTab === 'todos' ? 'bg-[#7c3aed] text-white shadow-sm' : 'bg-white border border-[#e5e7eb] text-[#374151] hover:bg-gray-50'}`}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar">
+          <button
+            onClick={() => setSelectedTab('pendentes')}
+            className={`px-4 py-2 rounded-lg font-bold text-[14px] whitespace-nowrap transition-colors flex items-center gap-2 ${
+              selectedTab === 'pendentes' 
+                ? 'bg-[#ef4444] text-white shadow-sm' 
+                : 'bg-white border border-[#e5e7eb] text-[#4b5563] hover:bg-[#f9fafb]'
+            }`}
           >
-            Todos ({counts.todos})
+            🔴 Pendentes <span className="opacity-80">({counts.pendentes})</span>
           </button>
-          <button 
-            onClick={() => setSelectedTab('novo')}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${selectedTab === 'novo' ? 'bg-[#7c3aed] text-white shadow-sm' : 'bg-white border border-[#e5e7eb] text-[#374151] hover:bg-gray-50'}`}
+          <button
+            onClick={() => setSelectedTab('em_andamento')}
+            className={`px-4 py-2 rounded-lg font-bold text-[14px] whitespace-nowrap transition-colors flex items-center gap-2 ${
+              selectedTab === 'em_andamento' 
+                ? 'bg-[#f59e0b] text-white shadow-sm' 
+                : 'bg-white border border-[#e5e7eb] text-[#4b5563] hover:bg-[#f9fafb]'
+            }`}
           >
-            Novos ({counts.novos})
+            🟡 Em Andamento <span className="opacity-80">({counts.em_andamento})</span>
           </button>
-          <button 
-            onClick={() => setSelectedTab('em_atendimento')}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${selectedTab === 'em_atendimento' ? 'bg-[#7c3aed] text-white shadow-sm' : 'bg-white border border-[#e5e7eb] text-[#374151] hover:bg-gray-50'}`}
+          <button
+            onClick={() => setSelectedTab('fechados')}
+            className={`px-4 py-2 rounded-lg font-bold text-[14px] whitespace-nowrap transition-colors flex items-center gap-2 ${
+              selectedTab === 'fechados' 
+                ? 'bg-[#10b981] text-white shadow-sm' 
+                : 'bg-white border border-[#e5e7eb] text-[#4b5563] hover:bg-[#f9fafb]'
+            }`}
           >
-            Em atendimento ({counts.em_atendimento})
-          </button>
-          <button 
-            onClick={() => setSelectedTab('retornos')}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${selectedTab === 'retornos' ? 'bg-[#7c3aed] text-white shadow-sm' : 'bg-white border border-[#e5e7eb] text-[#374151] hover:bg-gray-50'}`}
-          >
-            Retornos ({counts.retornos})
-          </button>
-          <button 
-            onClick={() => setSelectedTab('recuperados')}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${selectedTab === 'recuperados' ? 'bg-[#10b981] text-white shadow-sm' : 'bg-white border border-[#e5e7eb] text-[#10b981] hover:bg-green-50'}`}
-          >
-            🏆 Aprovados ({counts.recuperados})
+            🏆 Fechados <span className="opacity-80">({counts.fechados})</span>
           </button>
         </div>
         <div className="hidden md:flex items-center gap-1 text-[#6b7280] text-sm font-medium cursor-pointer hover:text-gray-900">
-          Mais recentes
-          <ChevronDown className="w-4 h-4" />
+          Mais recentes <ChevronDown className="w-4 h-4" />
         </div>
       </div>
 
