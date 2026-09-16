@@ -60,23 +60,29 @@ export default function EquipeDashboard() {
 
   const [editingLinkMember, setEditingLinkMember] = useState<TeamMemberStat | null>(null)
   const [linkInput, setLinkInput] = useState('')
+  const [salesLinkInput, setSalesLinkInput] = useState('')
   const [isSavingLink, setIsSavingLink] = useState(false)
 
   const handleEditLinkClick = (member: TeamMemberStat) => {
     setEditingLinkMember(member)
     setLinkInput(member.affiliate_link || '')
+    setSalesLinkInput(member.sales_link || '')
   }
 
   const handleSaveLink = async () => {
     if (!editingLinkMember) return
     setIsSavingLink(true)
     try {
-      await adminService.updateAffiliateLink(editingLinkMember.id, linkInput.trim() || null)
-      setTeam(prev => prev.map(m => m.id === editingLinkMember.id ? { ...m, affiliate_link: linkInput.trim() || undefined } : m))
+      await adminService.updateAffiliateLink(editingLinkMember.id, linkInput.trim() || null, salesLinkInput.trim() || null)
+      setTeam(prev => prev.map(m => m.id === editingLinkMember.id ? { 
+        ...m, 
+        affiliate_link: linkInput.trim() || undefined,
+        sales_link: salesLinkInput.trim() || undefined 
+      } : m))
       setEditingLinkMember(null)
     } catch (error) {
       console.error('Erro ao salvar link:', error)
-      alert('Não foi possível salvar o link de afiliado.')
+      alert('Não foi possível salvar os links.')
     } finally {
       setIsSavingLink(false)
     }
@@ -110,7 +116,7 @@ export default function EquipeDashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-              <h3 className="text-lg font-semibold text-gray-900">Link de Afiliado</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Links de Afiliado</h3>
               <button 
                 onClick={() => setEditingLinkMember(null)}
                 className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 transition-colors"
@@ -120,17 +126,29 @@ export default function EquipeDashboard() {
             </div>
             <div className="p-6 space-y-4">
               <p className="text-sm text-gray-600">
-                Defina o link de checkout (ex: Cakto) para o vendedor <strong>{editingLinkMember.name}</strong>. Ele poderá copiar este link diretamente da gaveta de leads.
+                Defina os links para o vendedor <strong>{editingLinkMember.name}</strong>. Ele poderá copiar estes links diretamente da gaveta de leads.
               </p>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">URL do Link</label>
-                <input 
-                  type="url"
-                  placeholder="https://pay.cakto.com.br/... ?affiliate=..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-800 placeholder-gray-400 bg-white"
-                  value={linkInput}
-                  onChange={(e) => setLinkInput(e.target.value)}
-                />
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">🔗 URL do Checkout</label>
+                  <input 
+                    type="url"
+                    placeholder="https://pay.cakto.com.br/... ?affiliate=..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-800 placeholder-gray-400 bg-white"
+                    value={linkInput}
+                    onChange={(e) => setLinkInput(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">📄 URL da Página de Vendas</label>
+                  <input 
+                    type="url"
+                    placeholder="https://meuproduto.com.br/... ?affiliate=..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-800 placeholder-gray-400 bg-white"
+                    value={salesLinkInput}
+                    onChange={(e) => setSalesLinkInput(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50/50">
@@ -145,7 +163,7 @@ export default function EquipeDashboard() {
                 disabled={isSavingLink}
                 className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
               >
-                {isSavingLink ? 'Salvando...' : 'Salvar Link'}
+                {isSavingLink ? 'Salvando...' : 'Salvar Links'}
               </button>
             </div>
           </div>

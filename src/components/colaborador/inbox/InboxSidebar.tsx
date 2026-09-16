@@ -12,11 +12,12 @@ interface InboxSidebarProps {
   onScheduleAction: (leadId: string, nextActionAt: string | null) => Promise<void>;
   onSaveNote: (leadId: string, notes: string) => Promise<void>;
   affiliateLink?: string;
+  salesLink?: string;
   viewerRole?: 'admin' | 'collaborator';
   canSeeEmail?: boolean;
 }
 
-export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, onSaveNote, affiliateLink, viewerRole = 'collaborator', canSeeEmail = true }: InboxSidebarProps) {
+export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, onSaveNote, affiliateLink, salesLink, viewerRole = 'collaborator', canSeeEmail = true }: InboxSidebarProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [noteText, setNoteText] = useState('')
 
@@ -299,18 +300,34 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
           Chamar {lead.name?.split(' ')[0]} no WhatsApp
         </button>
 
-        {/* Affiliate Link Copy Button */}
-        {affiliateLink && (
-          <button 
-            onClick={() => {
-              navigator.clipboard.writeText(affiliateLink)
-              toast.success('Link de afiliado copiado!')
-            }}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#f5f3ff] hover:bg-[#ede9fe] text-[#7c3aed] font-bold rounded-lg transition-colors border border-[#ddd6fe] shadow-sm text-[14px]"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            Copiar Meu Link de Pagamento
-          </button>
+        {/* Links de Afiliado */}
+        {(affiliateLink || salesLink) && (
+          <div className="space-y-2">
+            {affiliateLink && (
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(affiliateLink)
+                  toast.success('Link de Checkout copiado!')
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#f5f3ff] hover:bg-[#ede9fe] text-[#7c3aed] font-bold rounded-lg transition-colors border border-[#ddd6fe] shadow-sm text-[14px]"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                Copiar Checkout
+              </button>
+            )}
+            {salesLink && (
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(salesLink)
+                  toast.success('Página de Vendas copiada!')
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#ecfdf5] hover:bg-[#d1fae5] text-[#10b981] font-bold rounded-lg transition-colors border border-[#a7f3d0] shadow-sm text-[14px]"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                Copiar Pág. de Vendas
+              </button>
+            )}
+          </div>
         )}
 
         {/* Status Form */}

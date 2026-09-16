@@ -10,6 +10,7 @@ export type TeamMemberStat = {
   in_progress: number
   recovered: number
   affiliate_link?: string
+  sales_link?: string
 }
 
 interface TeamListProps {

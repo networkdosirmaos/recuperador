@@ -146,7 +146,8 @@ export const adminService = {
         can_see_email: p.can_see_email === null ? true : p.can_see_email,
         in_progress: pendentes || 0,
         recovered: recovered || 0,
-        affiliate_link: p.affiliate_link
+        affiliate_link: p.affiliate_link,
+        sales_link: p.sales_link
       })
     }
     return teamStats
@@ -184,10 +185,15 @@ export const adminService = {
     if (error) throw error
   },
 
-  async updateAffiliateLink(id: string, link: string | null) {
+  async updateAffiliateLink(id: string, link: string | null, salesLink?: string | null) {
+    const updateData: any = { affiliate_link: link }
+    if (salesLink !== undefined) {
+      updateData.sales_link = salesLink
+    }
+    
     const { error } = await supabase
       .from('profiles')
-      .update({ affiliate_link: link })
+      .update(updateData)
       .eq('id', id)
 
     if (error) throw error
