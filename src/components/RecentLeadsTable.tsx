@@ -32,11 +32,11 @@ export function RecentLeadsTable({ leads, heatSettings }: RecentLeadsTableProps)
           <table className="w-full text-sm text-left">
             <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
               <tr>
-                <th className="px-6 py-4">Nome do Lead</th>
-                <th className="px-6 py-4">Produto</th>
-                <th className="px-6 py-4">Temperatura</th>
-                <th className="px-6 py-4">Responsável</th>
-                <th className="px-6 py-4">Entrada / Atualização</th>
+                <th className="px-6 py-4 whitespace-nowrap">Nome do Lead</th>
+                <th className="px-6 py-4 whitespace-nowrap">Produto</th>
+                <th className="px-6 py-4 whitespace-nowrap">Temperatura</th>
+                <th className="px-6 py-4 whitespace-nowrap">Responsável</th>
+                <th className="px-6 py-4 whitespace-nowrap">Entrada / Atualização</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -46,17 +46,17 @@ export function RecentLeadsTable({ leads, heatSettings }: RecentLeadsTableProps)
 
                 return (
                   <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-gray-900">{lead.name}</td>
-                    <td className="px-6 py-4 text-gray-600">{lead.product}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${badge.color}`}>
+                    <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{lead.name}</td>
+                    <td className="px-6 py-4 text-gray-600 max-w-[250px] truncate" title={lead.product}>{lead.product}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-bold border whitespace-nowrap ${badge.color}`}>
                         {badge.label}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-gray-600">
+                    <td className="px-6 py-4 text-gray-600 whitespace-nowrap">
                       {lead.assigned_to ? lead.assigned_to : <span className="text-gray-400 italic">Na fila</span>}
                     </td>
-                    <td className="px-6 py-4 text-gray-500">
+                    <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
                       {new Date(lead.updated_at).toLocaleString('pt-BR')}
                     </td>
                   </tr>
