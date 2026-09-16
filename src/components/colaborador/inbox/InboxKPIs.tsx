@@ -12,14 +12,14 @@ interface InboxKPIsProps {
 
 export function InboxKPIs({ pendentes, emAndamento, fechados, animate, activeTab, onTabChange }: InboxKPIsProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+    <div className="flex overflow-x-auto pb-4 md:pb-0 md:grid md:grid-cols-3 gap-4 mb-8 -mx-4 px-4 md:mx-0 md:px-0 snap-x snap-mandatory hide-scrollbar">
       
       {/* 1. Pendentes (Fogo / Urgência) */}
       <button 
         onClick={() => onTabChange('pendentes')}
-        className={`text-left w-full bg-white rounded-xl p-5 flex items-center shadow-sm transition-all duration-300 cursor-pointer outline-none focus:outline-none hover:shadow-md ${
+        className={`min-w-[260px] shrink-0 snap-center md:min-w-0 md:shrink text-left w-full bg-white rounded-xl p-5 flex items-center shadow-sm transition-all duration-300 cursor-pointer outline-none focus:outline-none hover:shadow-md ${
           activeTab === 'pendentes' 
-            ? 'ring-2 ring-[#ef4444] border-transparent scale-[1.02]' 
+            ? 'ring-2 ring-[#ef4444] border-transparent md:scale-[1.02]' 
             : 'border border-[#e5e7eb] opacity-80 hover:opacity-100'
         } ${animate && activeTab === 'pendentes' ? 'ring-4 ring-[#ef4444]/40 z-10' : ''}`}
       >
@@ -35,9 +35,9 @@ export function InboxKPIs({ pendentes, emAndamento, fechados, animate, activeTab
       {/* 2. Em Andamento */}
       <button 
         onClick={() => onTabChange('em_andamento')}
-        className={`text-left w-full bg-white rounded-xl p-5 flex items-center shadow-sm transition-all duration-300 cursor-pointer outline-none focus:outline-none hover:shadow-md ${
+        className={`min-w-[260px] shrink-0 snap-center md:min-w-0 md:shrink text-left w-full bg-white rounded-xl p-5 flex items-center shadow-sm transition-all duration-300 cursor-pointer outline-none focus:outline-none hover:shadow-md ${
           activeTab === 'em_andamento' 
-            ? 'ring-2 ring-[#f59e0b] border-transparent scale-[1.02]' 
+            ? 'ring-2 ring-[#f59e0b] border-transparent md:scale-[1.02]' 
             : 'border border-[#e5e7eb] opacity-80 hover:opacity-100'
         }`}
       >
@@ -53,9 +53,9 @@ export function InboxKPIs({ pendentes, emAndamento, fechados, animate, activeTab
       {/* 3. Fechados */}
       <button 
         onClick={() => onTabChange('fechados')}
-        className={`text-left w-full bg-white rounded-xl p-5 flex items-center shadow-sm transition-all duration-300 cursor-pointer outline-none focus:outline-none hover:shadow-md ${
+        className={`min-w-[260px] shrink-0 snap-center md:min-w-0 md:shrink text-left w-full bg-white rounded-xl p-5 flex items-center shadow-sm transition-all duration-300 cursor-pointer outline-none focus:outline-none hover:shadow-md ${
           activeTab === 'fechados' 
-            ? 'ring-2 ring-[#10b981] border-transparent scale-[1.02]' 
+            ? 'ring-2 ring-[#10b981] border-transparent md:scale-[1.02]' 
             : 'border border-[#e5e7eb] opacity-80 hover:opacity-100'
         }`}
       >

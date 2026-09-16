@@ -11,7 +11,9 @@ import {
   LogOut,
   Target,
   Webhook,
-  Folder
+  Folder,
+  Menu,
+  X
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -19,6 +21,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const [isAuthorized, setIsAuthorized] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     async function checkRole() {
@@ -37,6 +40,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     }
     checkRole()
   }, [router])
+
+  useEffect(() => {
+    // Fecha o menu mobile quando mudar de rota
+    setIsMobileMenuOpen(false)
+  }, [pathname])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -81,12 +89,43 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   ]
 
   return (
-    <div className="flex h-screen bg-gray-50 text-slate-800">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm">
-        <div className="h-16 flex items-center px-6 border-b border-gray-200">
+    <div className="flex h-screen bg-gray-50 text-slate-800 flex-col md:flex-row">
+      
+      {/* Mobile Header (Apenas celular) */}
+      <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:hidden flex-shrink-0 z-30 shadow-sm">
+        <div className="flex items-center">
           <Target className="w-6 h-6 text-[#7c3aed] mr-2" />
           <span className="text-xl font-bold text-slate-800">Admin</span>
+        </div>
+        <button 
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="p-2 text-gray-500 hover:text-gray-700 bg-gray-100 rounded-md"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Overlay Escuro para Mobile */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-40 md:hidden transition-opacity" 
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar (Drawer no mobile, fixo no Desktop) */}
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex flex-col shadow-xl md:shadow-sm transform transition-transform duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200 flex-shrink-0">
+          <div className="flex items-center">
+            <Target className="w-6 h-6 text-[#7c3aed] mr-2" />
+            <span className="text-xl font-bold text-slate-800">Admin</span>
+          </div>
+          <button 
+            className="md:hidden p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
         
         <nav className="flex-1 overflow-y-auto py-4 px-4 space-y-6">
@@ -130,8 +169,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-8">
+      <main className="flex-1 overflow-y-auto w-full relative z-0 bg-gray-50">
+        <div className="p-4 md:p-8">
           {children}
         </div>
       </main>
