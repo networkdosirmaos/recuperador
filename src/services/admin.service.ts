@@ -112,5 +112,74 @@ export const adminService = {
       
       if (leadsErr) throw leadsErr
     }
+  },
+
+  async getTeamStats() {
+    const { data: profiles, error: profError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('role', 'collaborator')
+      
+    if (profError) throw profError
+    if (!profiles) return []
+
+    const teamStats = []
+    
+    for (const p of profiles) {
+      const { count: pendentes } = await supabase
+        .from('leads')
+        .select('*', { count: 'exact', head: true })
+        .eq('current_assignee_id', p.id)
+        .in('status', ['novo', 'em_atendimento'])
+
+      const { count: recovered } = await supabase
+        .from('leads')
+        .select('*', { count: 'exact', head: true })
+        .eq('current_assignee_id', p.id)
+        .eq('status', 'recuperado')
+        
+      teamStats.push({
+        id: p.id,
+        name: p.full_name || 'Vendedor',
+        email: p.email || 'E-mail não sincronizado',
+        is_active: p.is_active === null ? true : p.is_active,
+        in_progress: pendentes || 0,
+        recovered: recovered || 0,
+        affiliate_link: p.affiliate_link
+      })
+    }
+    return teamStats
+  },
+
+  async toggleCollaboratorStatus(id: string, currentStatus: boolean) {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_active: !currentStatus })
+      .eq('id', id)
+      
+    if (error) throw error
+  },
+
+  async returnCollaboratorLeads(id: string) {
+    const { error } = await supabase
+      .from('leads')
+      .update({ 
+        current_assignee_id: null, 
+        status: 'novo', 
+        updated_at: new Date().toISOString() 
+      })
+      .eq('current_assignee_id', id)
+      .not('status', 'in', '("recuperado","perdido")')
+
+    if (error) throw error
+  },
+
+  async updateAffiliateLink(id: string, link: string | null) {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ affiliate_link: link })
+      .eq('id', id)
+
+    if (error) throw error
   }
 }

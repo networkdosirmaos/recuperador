@@ -13,6 +13,7 @@ import { InboxKPIs } from '@/components/colaborador/inbox/InboxKPIs'
 import { InboxLeadCard } from '@/components/colaborador/inbox/InboxLeadCard'
 import { InboxSidebar } from '@/components/colaborador/inbox/InboxSidebar'
 import { useLeadGamification } from '@/hooks/useLeadGamification'
+import { useLeadBuckets } from '@/hooks/useLeadBuckets'
 
 export default function ColaboradorDashboard() {
   const queryClient = useQueryClient()
@@ -51,83 +52,8 @@ export default function ColaboradorDashboard() {
   const [selectedTab, setSelectedTab] = useState<'pendentes' | 'em_andamento' | 'finalizados'>('pendentes')
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
   
-  // Relógio Fantasma (atualiza a cada 30 segundos)
-  const [nowTick, setNowTick] = useState(Date.now())
-  useEffect(() => {
-    const interval = setInterval(() => setNowTick(Date.now()), 30000)
-    return () => clearInterval(interval)
-  }, [])
-
-  // Derived Data
-  const { filteredLeads, groupedLeads, counts } = useMemo(() => {
-    let pendentes_count = 0
-    let em_andamento_count = 0
-    let finalizados_count = 0
-    let coolingDown_count = 0
-    const isApproved = (l: any) => l.status === 'recuperado' // Vendas Recuperadas
-    const isLost = (l: any) => l.status === 'perdido' // Vendas Perdidas
-    const isOrganic = (l: any) => l.status === 'venda_organica' || l.gateway_event === 'purchase_approved' || l.gateway_status === 'approved'
-    
-    const isCoolingDown = (l: any) => {
-      const isPixEvent = l.gateway_event === 'pix_generated' || l.gateway_event === 'pix_gerado' || l.gateway_event === 'waiting_payment';
-      return isPixEvent && l.status === 'novo' && (nowTick - new Date(l.updated_at || l.created_at).getTime() < 6 * 60 * 1000);
-    }
-    const isPastDue = (l: any) => l.next_action_at && new Date(l.next_action_at).getTime() <= nowTick
-    const isFuture = (l: any) => l.next_action_at && new Date(l.next_action_at).getTime() > nowTick
-
-    const getBucket = (l: any) => {
-      if (isOrganic(l)) return 'ignorar' // Venda lisa, some da tela
-      if (isApproved(l) || isLost(l)) return 'finalizados' // Recuperados reais e Perdidos
-      if (isCoolingDown(l)) return 'geladeira'
-      // Se é novo OU o retorno está vencido -> PENDENTES (Fogo)
-      if (l.status === 'novo' || isPastDue(l)) return 'pendentes'
-      // O resto (em_atendimento sem data, ou com retorno no futuro) -> EM ANDAMENTO
-      return 'em_andamento'
-    }
-
-    myLeads.forEach((l: any) => {
-      const bucket = getBucket(l)
-      if (bucket === 'finalizados') finalizados_count++
-      else if (bucket === 'geladeira') coolingDown_count++
-      else if (bucket === 'pendentes') pendentes_count++
-      else if (bucket === 'em_andamento') em_andamento_count++
-    })
-
-    const filtered = myLeads.filter((l: any) => {
-      const bucket = getBucket(l)
-      if (bucket === 'geladeira' || bucket === 'ignorar') return false
-      return bucket === selectedTab
-    })
-
-    // Grouping by time (Agora = less than 2h old, Hoje = today)
-    const grouped = { agora: [] as any[], hoje: [] as any[], antigos: [] as any[] }
-    
-    filtered.forEach((l: any) => {
-      const dateToCompare = l.next_action_at ? new Date(l.next_action_at) : new Date(l.created_at || l.updated_at)
-      const diffMs = nowTick - dateToCompare.getTime()
-      const diffHours = diffMs / (1000 * 60 * 60)
-      
-      if (diffHours < 2 && diffHours >= -1) {
-        grouped.agora.push(l)
-      } else if (diffHours < 24 && diffHours >= -24) {
-        grouped.hoje.push(l)
-      } else {
-        grouped.antigos.push(l)
-      }
-    })
-
-    return { 
-      filteredLeads: filtered, 
-      groupedLeads: grouped,
-      counts: { 
-        pendentes: pendentes_count, 
-        em_andamento: em_andamento_count, 
-        finalizados: finalizados_count, 
-        coolingDown: coolingDown_count,
-        todos_ativos: pendentes_count + em_andamento_count 
-      } 
-    }
-  }, [myLeads, selectedTab, nowTick])
+  // Lógica de Negócio Modularizada
+  const { filteredLeads, groupedLeads, counts, nowTick } = useLeadBuckets(myLeads, selectedTab)
 
   // Motor de Gamificação
   const { isAnimating } = useLeadGamification(counts.pendentes)
