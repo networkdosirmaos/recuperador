@@ -14,6 +14,7 @@ import { InboxLeadCard } from '@/components/colaborador/inbox/InboxLeadCard'
 import { InboxSidebar } from '@/components/colaborador/inbox/InboxSidebar'
 import { useLeadGamification } from '@/hooks/useLeadGamification'
 import { useLeadBuckets } from '@/hooks/useLeadBuckets'
+import { GroupedVirtuoso } from 'react-virtuoso'
 
 export default function ColaboradorDashboard() {
   const queryClient = useQueryClient()
@@ -53,7 +54,7 @@ export default function ColaboradorDashboard() {
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
   
   // Lógica de Negócio Modularizada
-  const { filteredLeads, groupedLeads, counts, nowTick } = useLeadBuckets(myLeads, selectedTab)
+  const { filteredLeads, groupedLeads, counts } = useLeadBuckets(myLeads, selectedTab)
 
   // Motor de Gamificação
   const { isAnimating } = useLeadGamification(counts.pendentes)
@@ -162,6 +163,27 @@ export default function ColaboradorDashboard() {
 
   const selectedLeadData = myLeads.find((l: any) => l.id === selectedLeadId) || null
 
+  // Virtualization Data Prep
+  const groupNames: string[] = []
+  const groupCounts: number[] = []
+  const flattenedLeads: any[] = []
+
+  if (groupedLeads.agora.length > 0) {
+    groupNames.push('Agora')
+    groupCounts.push(groupedLeads.agora.length)
+    flattenedLeads.push(...groupedLeads.agora)
+  }
+  if (groupedLeads.hoje.length > 0) {
+    groupNames.push('Hoje')
+    groupCounts.push(groupedLeads.hoje.length)
+    flattenedLeads.push(...groupedLeads.hoje)
+  }
+  if (groupedLeads.antigos.length > 0) {
+    groupNames.push('Anteriores')
+    groupCounts.push(groupedLeads.antigos.length)
+    flattenedLeads.push(...groupedLeads.antigos)
+  }
+
   return (
     <div className="max-w-[1200px] w-full mx-auto space-y-6 pb-12">
       <div className="hidden md:block">
@@ -225,45 +247,33 @@ export default function ColaboradorDashboard() {
         onTabChange={setSelectedTab}
       />
 
-      {/* Inbox List Grouped */}
+      {/* Inbox List Grouped (Virtualized) */}
       <div className="flex flex-col gap-8">
-        {groupedLeads.agora.length > 0 && (
-          <div>
-            <h4 className="text-[15px] font-bold text-[#374151] mb-3">Agora</h4>
-            <div className="flex flex-col gap-3">
-              {groupedLeads.agora.map((lead: any) => (
-                <InboxLeadCard 
-                  key={lead.id} lead={lead} isSelected={selectedLeadId === lead.id} onClick={() => setSelectedLeadId(lead.id)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {groupedLeads.hoje.length > 0 && (
-          <div>
-            <h4 className="text-[15px] font-bold text-[#374151] mb-3">Hoje</h4>
-            <div className="flex flex-col gap-3">
-              {groupedLeads.hoje.map((lead: any) => (
-                <InboxLeadCard 
-                  key={lead.id} lead={lead} isSelected={selectedLeadId === lead.id} onClick={() => setSelectedLeadId(lead.id)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {groupedLeads.antigos.length > 0 && (
-          <div>
-            <h4 className="text-[15px] font-bold text-[#374151] mb-3">Anteriores</h4>
-            <div className="flex flex-col gap-3">
-              {groupedLeads.antigos.map((lead: any) => (
-                <InboxLeadCard 
-                  key={lead.id} lead={lead} isSelected={selectedLeadId === lead.id} onClick={() => setSelectedLeadId(lead.id)}
-                />
-              ))}
-            </div>
-          </div>
+        {flattenedLeads.length > 0 && (
+          <GroupedVirtuoso
+            useWindowScroll
+            groupCounts={groupCounts}
+            groupContent={(index) => {
+              return (
+                <div className="bg-[#f8fafc] py-2 z-10 mb-1">
+                  <h4 className="text-[15px] font-bold text-[#374151]">{groupNames[index]}</h4>
+                </div>
+              )
+            }}
+            itemContent={(index, groupIndex) => {
+              const lead = flattenedLeads[index]
+              return (
+                <div className="pb-3">
+                  <InboxLeadCard 
+                    key={lead.id} 
+                    lead={lead} 
+                    isSelected={selectedLeadId === lead.id} 
+                    onClick={() => setSelectedLeadId(lead.id)}
+                  />
+                </div>
+              )
+            }}
+          />
         )}
 
         {filteredLeads.length === 0 && (
