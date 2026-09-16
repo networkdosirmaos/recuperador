@@ -47,6 +47,17 @@ export default function EquipeDashboard() {
     }
   }
 
+  const handleToggleEmail = async (id: string, currentStatus: boolean) => {
+    try {
+      setTeam(prev => prev.map(m => m.id === id ? { ...m, can_see_email: !currentStatus } : m))
+      await adminService.toggleEmailVisibility(id, currentStatus)
+    } catch (error) {
+      console.error('Erro ao alternar visibilidade do e-mail:', error)
+      alert('Não foi possível alterar a visibilidade do e-mail.')
+      fetchTeam() // revert
+    }
+  }
+
   const [editingLinkMember, setEditingLinkMember] = useState<TeamMemberStat | null>(null)
   const [linkInput, setLinkInput] = useState('')
   const [isSavingLink, setIsSavingLink] = useState(false)
@@ -91,6 +102,7 @@ export default function EquipeDashboard() {
         onToggleStatus={handleToggleStatus} 
         onReturnLeads={handleReturnLeads}
         onEditLink={handleEditLinkClick}
+        onToggleEmail={handleToggleEmail}
       />
 
       {/* Modal Edição de Link */}

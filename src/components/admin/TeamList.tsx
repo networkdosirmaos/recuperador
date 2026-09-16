@@ -1,4 +1,4 @@
-import { PauseCircle, PlayCircle, RefreshCw, Link2, Eye } from 'lucide-react'
+import { PauseCircle, PlayCircle, RefreshCw, Link2, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 
 export type TeamMemberStat = {
@@ -6,6 +6,7 @@ export type TeamMemberStat = {
   name: string
   email: string
   is_active: boolean
+  can_see_email: boolean
   in_progress: number
   recovered: number
   affiliate_link?: string
@@ -16,9 +17,10 @@ interface TeamListProps {
   onToggleStatus: (id: string, currentStatus: boolean) => Promise<void>
   onReturnLeads: (id: string) => Promise<void>
   onEditLink?: (member: TeamMemberStat) => void
+  onToggleEmail?: (id: string, currentStatus: boolean) => Promise<void>
 }
 
-export function TeamList({ members, onToggleStatus, onReturnLeads, onEditLink }: TeamListProps) {
+export function TeamList({ members, onToggleStatus, onReturnLeads, onEditLink, onToggleEmail }: TeamListProps) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
       <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
@@ -101,6 +103,23 @@ export function TeamList({ members, onToggleStatus, onReturnLeads, onEditLink }:
                         >
                           <RefreshCw className="w-4 h-4 mr-1" />
                           Devolver Leads
+                        </button>
+                      )}
+                      {onToggleEmail && (
+                        <button
+                          onClick={() => onToggleEmail(member.id, member.can_see_email)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors shadow-sm ${
+                            member.can_see_email 
+                              ? 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700' 
+                              : 'border-red-200 bg-red-50 hover:bg-red-100 text-red-700'
+                          }`}
+                          title={member.can_see_email ? 'Ocultar emails dos leads' : 'Mostrar emails dos leads'}
+                        >
+                          {member.can_see_email ? (
+                            <><Eye className="w-4 h-4" /> E-mails Visíveis</>
+                          ) : (
+                            <><EyeOff className="w-4 h-4" /> E-mails Ocultos</>
+                          )}
                         </button>
                       )}
                       <button

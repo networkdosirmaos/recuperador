@@ -351,6 +351,8 @@ export function InboxView({ targetUserId, viewerRole, viewerId }: InboxViewProps
           onScheduleAction={handleScheduleAction}
           onSaveNote={handleSaveNote}
           affiliateLink={viewerRole === 'collaborator' ? profile?.affiliate_link : undefined}
+          viewerRole={viewerRole}
+          canSeeEmail={profile?.can_see_email ?? true}
         />
       </div>
     </div>

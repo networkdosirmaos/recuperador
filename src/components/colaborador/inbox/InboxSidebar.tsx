@@ -12,9 +12,11 @@ interface InboxSidebarProps {
   onScheduleAction: (leadId: string, nextActionAt: string | null) => Promise<void>;
   onSaveNote: (leadId: string, notes: string) => Promise<void>;
   affiliateLink?: string;
+  viewerRole?: 'admin' | 'collaborator';
+  canSeeEmail?: boolean;
 }
 
-export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, onSaveNote, affiliateLink }: InboxSidebarProps) {
+export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, onSaveNote, affiliateLink, viewerRole = 'collaborator', canSeeEmail = true }: InboxSidebarProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [noteText, setNoteText] = useState('')
 
@@ -161,8 +163,8 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
                   {log.created_at ? formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR }) : 'Desconhecido'}
                 </span>
                 
-                {/* Botão de Ver Payload - Apenas no primeiro evento (mais recente) que não seja nota humana e se tiver gateway_metadata */}
-                {!isHumanNote && idx === 0 && lead.gateway_metadata && (
+                {/* Botão de Ver Payload - Apenas no primeiro evento (mais recente) que não seja nota humana e se tiver gateway_metadata, e APENAS PARA ADMIN */}
+                {!isHumanNote && idx === 0 && lead.gateway_metadata && viewerRole === 'admin' && (
                   <div className="mt-3">
                     <details className="group">
                       <summary className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer list-none flex items-center gap-1 transition-colors">
@@ -190,6 +192,12 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
         )}
       </div>
     )
+  }
+
+  const renderEmail = () => {
+    if (!lead.email) return '-';
+    if (viewerRole === 'admin' || canSeeEmail) return lead.email;
+    return lead.email.replace(/(.{2})(.*)(@.*)/, '$1***$3');
   }
 
   return (
@@ -221,7 +229,18 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
       <div className="flex-1 overflow-y-auto px-6 pb-8 space-y-6">
         
         {/* Alert Context */}
-        {lead.gateway_status === 'waiting_payment' && (
+        {lead.refund_reason && (
+          <div className="bg-[#fef2f2] rounded-lg p-4 border border-[#fecaca] flex items-start gap-3">
+            <div className="mt-0.5 text-[#ef4444] bg-white p-1.5 rounded-full">
+              <AlertCircle className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="block text-[14px] font-bold text-[#991b1b]">Reembolso Solicitado</span>
+              <span className="block text-[13px] text-[#b91c1c]">{lead.refund_reason}</span>
+            </div>
+          </div>
+        )}
+        {lead.gateway_status === 'waiting_payment' && !lead.refund_reason && (
           <div className="bg-[#f9fafb] rounded-lg p-4 border border-[#e5e7eb] flex items-start gap-3">
             <div className="mt-0.5 text-[#7c3aed] bg-[#f5f3ff] p-1.5 rounded-full">
               <Clock className="w-4 h-4" />
@@ -232,7 +251,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
             </div>
           </div>
         )}
-        {(lead.gateway_status === 'refused' || lead.status === 'perdido') && (
+        {(lead.gateway_status === 'refused' || lead.status === 'perdido') && !lead.refund_reason && (
           <div className="bg-[#fef2f2] rounded-lg p-4 border border-[#fecaca] flex items-start gap-3">
             <div className="mt-0.5 text-[#ef4444] bg-white p-1.5 rounded-full">
               <AlertCircle className="w-4 h-4" />
@@ -263,6 +282,10 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
             <div className="flex items-center gap-3">
               <Phone className="w-4 h-4 text-[#9ca3af]" />
               <span>{lead.phone || '-'}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <MessageCircle className="w-4 h-4 text-[#9ca3af]" />
+              <span>{renderEmail()}</span>
             </div>
           </div>
         </div>

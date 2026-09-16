@@ -143,6 +143,7 @@ export const adminService = {
         name: p.full_name || 'Vendedor',
         email: p.email || 'E-mail não sincronizado',
         is_active: p.is_active === null ? true : p.is_active,
+        can_see_email: p.can_see_email === null ? true : p.can_see_email,
         in_progress: pendentes || 0,
         recovered: recovered || 0,
         affiliate_link: p.affiliate_link
@@ -155,6 +156,15 @@ export const adminService = {
     const { error } = await supabase
       .from('profiles')
       .update({ is_active: !currentStatus })
+      .eq('id', id)
+      
+    if (error) throw error
+  },
+
+  async toggleEmailVisibility(id: string, currentStatus: boolean) {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ can_see_email: !currentStatus })
       .eq('id', id)
       
     if (error) throw error
