@@ -23,26 +23,51 @@ export interface NormalizedWebhookPayload {
 
 export const coreLeadService = {
   async processWebhookEvent(payload: NormalizedWebhookPayload) {
-    // 1. ROLETA AUTOMÁTICA (ROUND-ROBIN)
     let assignedSellerId = null
-    const { data: availableSellers } = await supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('role', 'collaborator')
-      .eq('is_active', true)
-      .order('last_assigned_at', { ascending: true, nullsFirst: true })
-      .limit(1)
 
-    if (availableSellers && availableSellers.length > 0) {
-      assignedSellerId = availableSellers[0].id
-      
-      await supabaseAdmin
-        .from('profiles')
-        .update({ last_assigned_at: new Date().toISOString() })
-        .eq('id', assignedSellerId)
+    // 1. CHECAR DONO DA LISTA (Fura-fila da Roleta)
+    if (payload.listId) {
+      const { data: listData } = await supabaseAdmin
+        .from('lead_lists')
+        .select('default_assignee_id')
+        .eq('id', payload.listId)
+        .single()
+
+      if (listData?.default_assignee_id) {
+        // Se a lista tem dono, verificar se ele está ativo
+        const { data: ownerProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('id, is_active')
+          .eq('id', listData.default_assignee_id)
+          .single()
+
+        if (ownerProfile && ownerProfile.is_active) {
+          assignedSellerId = ownerProfile.id
+        }
+      }
     }
 
-    // 2. DEDUPLICAÇÃO (Buscar se o Lead já existe)
+    // 2. ROLETA AUTOMÁTICA (Se não tem dono ou o dono está inativo)
+    if (!assignedSellerId) {
+      const { data: availableSellers } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('role', 'collaborator')
+        .eq('is_active', true)
+        .order('last_assigned_at', { ascending: true, nullsFirst: true })
+        .limit(1)
+
+      if (availableSellers && availableSellers.length > 0) {
+        assignedSellerId = availableSellers[0].id
+        
+        await supabaseAdmin
+          .from('profiles')
+          .update({ last_assigned_at: new Date().toISOString() })
+          .eq('id', assignedSellerId)
+      }
+    }
+
+    // 3. DEDUPLICAÇÃO (Buscar se o Lead já existe)
     let existingLead = null
     if (payload.customerId || payload.email || payload.phone) {
       const orConditions = []

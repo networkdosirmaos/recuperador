@@ -7,6 +7,8 @@ import { Folder, Webhook, UploadCloud, Trash2, ArrowRight, Activity, Users, Plus
 import { useRouter } from 'next/navigation'
 import { CsvUploader } from '@/components/upload/CsvUploader'
 import { ColumnMapper } from '@/components/upload/ColumnMapper'
+import { adminService } from '@/services/admin.service'
+import toast from 'react-hot-toast'
 
 type ViewMode = 'LIST' | 'SELECT_FILE' | 'MAPPING' | 'UPLOADING' | 'SUCCESS'
 
@@ -17,6 +19,8 @@ type ListAsset = {
   imported_at: string
   leadsCount: number
   recoveredCount: number
+  default_assignee_id?: string | null
+  owner_name?: string | null
 }
 
 export default function BasesPage() {
@@ -25,6 +29,12 @@ export default function BasesPage() {
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   
+  // Modal de Dono
+  const [ownerModal, setOwnerModal] = useState<{ isOpen: boolean, listId: string | null }>({ isOpen: false, listId: null })
+  const [collaborators, setCollaborators] = useState<{id: string, name: string}[]>([])
+  const [selectedCollab, setSelectedCollab] = useState<string>('none')
+  const [isAssigning, setIsAssigning] = useState(false)
+
   // Estados do Upload
   const [file, setFile] = useState<File | null>(null)
   const [csvHeaders, setCsvHeaders] = useState<string[]>([])
@@ -42,7 +52,20 @@ export default function BasesPage() {
   const fetchLists = async () => {
     try {
       setLoading(true)
-      // Buscamos todas as listas (Webhooks e CSVs) ativas
+      
+      // Buscar colaboradores para o modal (em paralelo)
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('role', 'collaborator')
+        .eq('is_active', true)
+        
+      if (profiles) {
+        setCollaborators(profiles.map(p => ({ id: p.id, name: p.full_name || 'Desconhecido' })))
+      }
+
+      // Buscar as listas
+      // OBS: Tentamos buscar default_assignee_id, caso a coluna ainda não exista ignoramos no map
       const { data: listsData, error: listsError } = await supabase
         .from('lead_lists')
         .select(`
@@ -50,21 +73,38 @@ export default function BasesPage() {
           name, 
           type, 
           imported_at,
-          leads(count)
+          default_assignee_id,
+          leads(count),
+          profiles(full_name)
         `)
         .order('imported_at', { ascending: false })
 
-      if (listsError) throw listsError
+      if (listsError) {
+        // Fallback caso a coluna falhe (O usuário ainda não rodou o SQL)
+        if (listsError.message.includes('default_assignee_id')) {
+          console.warn("SQL Snippet ainda não foi rodado.")
+          const fallbackData = await supabase.from('lead_lists').select('id, name, type, imported_at, leads(count)').order('imported_at', { ascending: false })
+          if (fallbackData.data) {
+            setLists(fallbackData.data.map((item: any) => ({
+              id: item.id, name: item.name, type: item.type, imported_at: item.imported_at,
+              leadsCount: item.leads?.[0]?.count || 0, recoveredCount: 0
+            })))
+          }
+          return;
+        } else {
+          throw listsError
+        }
+      }
 
-      // Processar os dados. Poderíamos buscar recovered count com RPC, 
-      // mas para MVP vamos exibir o count geral primeiro.
       const formatted = listsData.map((item: any) => ({
         id: item.id,
         name: item.name,
         type: item.type,
         imported_at: item.imported_at,
         leadsCount: item.leads?.[0]?.count || 0,
-        recoveredCount: 0 // Simplificado para MVP
+        recoveredCount: 0,
+        default_assignee_id: item.default_assignee_id,
+        owner_name: item.profiles?.full_name
       }))
 
       setLists(formatted)
@@ -75,27 +115,49 @@ export default function BasesPage() {
     }
   }
 
-  const handleDeleteCascade = async (list: ListAsset) => {
-    const confirmName = prompt(
-      `CUIDADO: Você está prestes a incinerar a pasta "${list.name}" e TODOS os seus ${list.leadsCount} leads.\n\n` +
-      `Isso não pode ser desfeito. Digite o nome da pasta para confirmar:`
-    )
+  const handleAssignOwner = async () => {
+    if (!ownerModal.listId) return
+    setIsAssigning(true)
+    try {
+      await adminService.assignListOwner(ownerModal.listId, selectedCollab === 'none' ? null : selectedCollab)
+      toast.success('Dono atribuído e leads atualizados!')
+      setOwnerModal({ isOpen: false, listId: null })
+      fetchLists()
+    } catch (err: any) {
+      toast.error('Erro ao atribuir dono.')
+      console.error(err)
+    } finally {
+      setIsAssigning(false)
+    }
+  }
 
-    if (confirmName !== list.name) {
-      if (confirmName !== null) alert('Nome incorreto. Exclusão cancelada.')
+  const handleDeleteCascade = async (list: ListAsset) => {
+    if (!window.confirm(`ATENÇÃO: Você está prestes a apagar a lista "${list.name}" e TODOS os ${list.leadsCount} leads dentro dela permanentemente. Deseja continuar?`)) {
       return
     }
-
-    setDeletingId(list.id)
+    
     try {
-      const res = await fetch(`/api/admin/lists/${list.id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Falha na API de exclusão')
+      setDeletingId(list.id)
       
-      alert('Pasta e todos os leads vinculados foram apagados com sucesso.')
+      const { error: deleteLeadsError } = await supabase
+        .from('leads')
+        .delete()
+        .eq('list_id', list.id)
+        
+      if (deleteLeadsError) throw deleteLeadsError
+
+      const { error: deleteListError } = await supabase
+        .from('lead_lists')
+        .delete()
+        .eq('id', list.id)
+
+      if (deleteListError) throw deleteListError
+
+      toast.success('Pasta e leads apagados com sucesso.')
       await fetchLists()
     } catch (error) {
       console.error('Erro ao deletar em cascata:', error)
-      alert('Erro ao excluir a base.')
+      toast.error('Erro ao excluir a base.')
     } finally {
       setDeletingId(null)
     }
@@ -229,9 +291,9 @@ export default function BasesPage() {
             <div key={list.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col">
               
               {/* Barra de cor baseada no tipo */}
-              <div className={`absolute top-0 left-0 w-full h-1.5 ${list.type === 'webhook_cakto' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
+              <div className={`absolute top-0 left-0 w-full h-1.5 ${list.type === 'webhook_cakto' ? 'bg-blue-500' : 'bg-[#7c3aed]'}`} />
 
-              <div className="flex justify-between items-start mb-6 mt-2">
+              <div className="flex justify-between items-start mb-4 mt-2">
                 <div className="flex gap-4">
                   <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
                     {getIcon(list.type)}
@@ -244,16 +306,35 @@ export default function BasesPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Informação do Dono */}
+              <div className="mb-4">
+                <div 
+                  onClick={() => {
+                    setSelectedCollab(list.default_assignee_id || 'none')
+                    setOwnerModal({ isOpen: true, listId: list.id })
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors group"
+                >
+                  <Users className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm font-medium text-gray-700">
+                    {list.default_assignee_id ? `👤 ${list.owner_name}` : '🎲 Roleta Automática'}
+                  </span>
+                  <span className="text-xs text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+                    (Alterar)
+                  </span>
+                </div>
+              </div>
               
               {/* Estatísticas */}
-              <div className="grid grid-cols-2 gap-4 mb-6 flex-1">
+              <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 flex flex-col">
                   <span className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Users className="w-3.5 h-3.5"/> Volume Total</span>
                   <span className="font-bold text-gray-900 text-lg">{list.leadsCount} leads</span>
                 </div>
                 <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 flex flex-col">
                   <span className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Activity className="w-3.5 h-3.5"/> Criação</span>
-                  <span className="font-medium text-gray-900 text-sm mt-0.5">
+                  <span className="medium text-gray-900 text-sm mt-0.5">
                     {new Date(list.imported_at).toLocaleDateString('pt-BR')}
                   </span>
                 </div>
@@ -272,7 +353,7 @@ export default function BasesPage() {
                 
                 <button 
                   onClick={() => router.push(`/admin/leads?listId=${list.id}`)}
-                  className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white font-medium py-2.5 rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="flex-1 flex items-center justify-center gap-2 bg-[#7c3aed] text-white font-medium py-2.5 rounded-lg hover:bg-[#6d28d9] transition-colors"
                 >
                   Abrir no CRM <ArrowRight className="w-4 h-4" />
                 </button>
@@ -360,6 +441,60 @@ export default function BasesPage() {
           </div>
         </div>
       )}
+
+      {/* Modal de Atribuição de Dono */}
+      {ownerModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <h3 className="font-bold text-gray-900 text-lg">Atribuir Dono da Lista</h3>
+              <button 
+                onClick={() => setOwnerModal({ isOpen: false, listId: null })}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <p className="text-sm text-gray-600 mb-6">
+                Escolha o colaborador que será dono desta lista. 
+                <strong>Todos os leads PENDENTES atuais e os próximos cairão direto para ele</strong>, ignorando a roleta.
+              </p>
+              
+              <select
+                value={selectedCollab}
+                onChange={(e) => setSelectedCollab(e.target.value)}
+                className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-[#7c3aed] focus:border-[#7c3aed] p-3 text-sm border"
+              >
+                <option value="none">🎲 Sem Dono (Distribuir na Roleta Automática)</option>
+                {collaborators.map(c => (
+                  <option key={c.id} value={c.id}>👤 {c.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+              <button
+                onClick={() => setOwnerModal({ isOpen: false, listId: null })}
+                className="px-4 py-2 font-medium text-gray-700 hover:text-gray-900 transition-colors"
+                disabled={isAssigning}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAssignOwner}
+                disabled={isAssigning}
+                className="px-6 py-2 bg-[#7c3aed] text-white font-medium rounded-lg hover:bg-[#6d28d9] transition-colors flex items-center disabled:opacity-70"
+              >
+                {isAssigning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Salvar Alterações
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

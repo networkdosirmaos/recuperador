@@ -91,5 +91,26 @@ export const adminService = {
       
     if (error) throw error
     return data || []
+  },
+
+  async assignListOwner(listId: string, assigneeId: string | null) {
+    // 1. Atualizar o dono da lista
+    const { error: listErr } = await supabase
+      .from('lead_lists')
+      .update({ default_assignee_id: assigneeId })
+      .eq('id', listId)
+    
+    if (listErr) throw listErr
+
+    // 2. Passar o trator (Atualizar todos os leads pendentes dessa lista)
+    if (assigneeId) {
+      const { error: leadsErr } = await supabase
+        .from('leads')
+        .update({ current_assignee_id: assigneeId })
+        .eq('list_id', listId)
+        .in('status', ['novo', 'em_atendimento'])
+      
+      if (leadsErr) throw leadsErr
+    }
   }
 }
