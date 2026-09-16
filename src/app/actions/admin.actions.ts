@@ -128,3 +128,26 @@ export async function deleteListCascadeSecure(listId: string) {
   
   return true
 }
+
+export async function migrateHistoryLogSecure() {
+  await requireAdmin()
+  const { data: leads, error } = await supabaseAdmin.from('leads').select('id, history_log').not('history_log', 'is', null)
+  if (error) throw error
+  let migratedCount = 0
+  for (const lead of leads) {
+    if (!lead.history_log || !Array.isArray(lead.history_log)) continue;
+    const events = lead.history_log.map((ev: any) => ({
+      lead_id: lead.id,
+      gateway_event: ev.type,
+      reason: ev.description,
+      gateway_status: 'MIGRATED',
+      created_at: ev.created_at || new Date().toISOString()
+    }))
+    if (events.length > 0) {
+      await supabaseAdmin.from('lead_events').insert(events)
+      await supabaseAdmin.from('leads').update({ history_log: null }).eq('id', lead.id)
+      migratedCount += events.length
+    }
+  }
+  return migratedCount
+}

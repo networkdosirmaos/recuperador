@@ -209,31 +209,25 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
           ) : activeTab === 'timeline' ? (
             /* CONTEÚDO DA LINHA DO TEMPO UNIFICADA */
             <div className="relative border-l-2 border-indigo-100 ml-4 space-y-8 pb-4">
-              {(() => {
-                const historyLog = Array.isArray(lead.history_log) ? lead.history_log : []
-                const humanNotes = historyLog.filter((e: any) => e.type === 'HUMAN_NOTE')
-                const formattedEvents = dbEvents.map((ev: any) => ({
-                  type: ev.gateway_event || ev.gateway_status || 'Sistema',
-                  description: ev.reason ? `Status: ${ev.gateway_status} - ${ev.reason}` : `Status: ${ev.gateway_status}`,
-                  reason: ev.reason,
-                  metadata: ev.metadata,
-                  created_at: ev.created_at,
-                  isDbEvent: true
-                }))
-                
-                const combined = [...humanNotes, ...formattedEvents].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-
-                if (combined.length === 0) {
-                  return <div className="pl-6 text-sm text-gray-500">Nenhum evento registrado no histórico para este cliente.</div>
-                }
-
-                return combined.map((ev: any, index: number) => {
-                  const isHumanNote = ev.type === 'HUMAN_NOTE';
-                  const isExpanded = expandedEvent === index.toString();
+              {loadingEvents ? (
+                <div className="flex justify-center p-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                </div>
+              ) : dbEvents.length === 0 ? (
+                <div className="text-center p-8 text-gray-500 bg-gray-50 rounded-xl border border-gray-100">
+                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Calendar className="w-5 h-5 text-gray-400" />
+                  </div>
+                  Nenhum evento registrado ainda.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {dbEvents.map((ev: any, index: number) => {
+                    const isHumanNote = ev.gateway_event === 'HUMAN_NOTE';
+                    const isExpanded = expandedEvent === index.toString();
                   
                   return (
                     <div key={index} className="relative pl-6 transition-all duration-200">
-                      {/* Bolinha na linha do tempo */}
                       <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-white ${index === 0 ? (isHumanNote ? 'bg-purple-500 shadow-[0_0_0_3px_rgba(168,85,247,0.2)]' : 'bg-indigo-600 shadow-[0_0_0_3px_rgba(79,70,229,0.2)]') : 'bg-gray-300'}`}></div>
                       
                       <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden hover:border-indigo-200 transition-colors">
@@ -253,7 +247,7 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
                                   ANOTAÇÃO DO COLABORADOR
                                 </span>
                               )}
-                              <span className="text-sm font-semibold text-gray-900">{isHumanNote ? 'Comentário Adicionado' : (ev.type || 'Evento')}</span>
+                              <span className="text-sm font-semibold text-gray-900">{isHumanNote ? 'Comentário Adicionado' : (ev.gateway_event || ev.gateway_status || 'Evento')}</span>
                             </div>
                             <div className="text-xs text-gray-500 flex items-center gap-1.5 mt-1.5">
                               <Calendar className="w-3.5 h-3.5" />
@@ -274,7 +268,7 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
                                   Conteúdo da Anotação:
                                 </span>
                                 <div className="font-medium text-purple-800 text-sm whitespace-pre-wrap leading-relaxed">
-                                  {ev.description || 'Sem descrição.'}
+                                  {ev.reason || 'Sem descrição.'}
                                 </div>
                               </div>
                             ) : (
@@ -284,7 +278,7 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
                                     Detalhe Rápido:
                                   </span>
                                   <div className="text-gray-200 break-words">
-                                    {ev.description || ev.reason || 'Sem descrição adicional.'}
+                                    {ev.reason || ev.gateway_status || 'Sem descrição adicional.'}
                                   </div>
                                 </div>
                                 {ev.metadata && (
@@ -302,8 +296,9 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
                       </div>
                     </div>
                   )
-                })
-              })()}
+                })}
+                </div>
+              )}
             </div>
           ) : (
             /* CONTEÚDO DA ABA DE DEBUG / INTEGRAÇÃO */

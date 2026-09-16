@@ -29,16 +29,12 @@ export async function appendLeadHistorySecure(leadId: string, userId: string, te
     throw new Error('Acesso negado: Você não é dono deste lead.')
   }
 
-  const newEvent = {
-    type: 'HUMAN_NOTE',
-    description: text,
-    created_at: new Date().toISOString()
-  }
-
-  // Chama a procedure segura que evita colisão (Race Condition)
-  const { error } = await supabaseAdmin.rpc('append_lead_history', {
-    p_lead_id: leadId,
-    p_new_event: [newEvent]
+  const { error } = await supabaseAdmin.from('lead_events').insert({
+    lead_id: leadId,
+    gateway_event: 'HUMAN_NOTE',
+    reason: text,
+    gateway_status: 'NOTE',
+    metadata: { created_by: userId }
   })
 
   if (error) throw error

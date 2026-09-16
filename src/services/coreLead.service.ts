@@ -122,15 +122,7 @@ export const coreLeadService = {
       finalStatus = 'novo' // Volta pra fila urgente
     }
 
-    let historyLog = []
-
     if (existingLead) {
-      // Puxa o history_log atual
-      const { data: leadData } = await supabaseAdmin.from('leads').select('history_log').eq('id', existingLead.id).single()
-      if (leadData && Array.isArray(leadData.history_log)) {
-        historyLog = leadData.history_log
-      }
-
       // 3A. ATUALIZAR (Upsert)
       const { data: updated, error: updateError } = await supabaseAdmin
         .from('leads')
@@ -186,18 +178,7 @@ export const coreLeadService = {
       finalLeadId = inserted.id
     }
 
-    // 4. REGISTRAR O HISTÓRICO (Timeline - JSONB)
-    const newEvent = {
-      type: payload.event,
-      description: payload.isPing ? 'Webhook de Teste' : (payload.refusalReason || payload.gatewayStatus),
-      created_at: new Date().toISOString()
-    }
-    
-    historyLog.push(newEvent)
-
-    await supabaseAdmin.from('leads').update({ history_log: historyLog }).eq('id', finalLeadId)
-
-    // Tenta gravar na lead_events legada se ela existir
+    // 4. REGISTRAR O HISTÓRICO (Tabela Relacional - Evitando Race Conditions)
     try {
       await supabaseAdmin.from('lead_events').insert({
         lead_id: finalLeadId,
@@ -206,7 +187,9 @@ export const coreLeadService = {
         reason: payload.isPing ? 'Webhook de Teste' : payload.refusalReason,
         metadata: payload.rawPayload
       })
-    } catch(e) {}
+    } catch(e) {
+      console.error('Erro ao salvar evento relacional:', e)
+    }
 
     return { leadId: finalLeadId }
   }

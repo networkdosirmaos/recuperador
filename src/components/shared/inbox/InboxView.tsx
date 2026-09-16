@@ -117,26 +117,12 @@ export function InboxView({ targetUserId, viewerRole, viewerId }: InboxViewProps
   const addNoteMutation = useMutation({
     mutationFn: ({ leadId, text }: { leadId: string, text: string }) => 
       appendLeadHistorySecure(leadId, viewerId, text),
-    onMutate: async ({ leadId, text }) => {
-      await queryClient.cancelQueries({ queryKey: ['seller_leads', targetUserId] })
-      const previousLeads = queryClient.getQueryData(['seller_leads', targetUserId])
-      
-      const newEvent = {
-        type: 'HUMAN_NOTE',
-        description: text,
-        created_at: new Date().toISOString()
-      }
-      
-      queryClient.setQueryData(['seller_leads', targetUserId], (old: any) => 
-        old?.map((l: any) => l.id === leadId ? { ...l, history_log: [...(Array.isArray(l.history_log) ? l.history_log : []), newEvent] } : l)
-      )
-      return { previousLeads }
+    onSuccess: (_, { leadId }) => {
+      queryClient.invalidateQueries({ queryKey: ['lead_events', leadId] })
+      toast.success('Anotação salva com sucesso!')
     },
-    onError: (err, variables, context) => {
+    onError: () => {
       toast.error('Falha ao salvar anotação.')
-      if (context?.previousLeads) {
-        queryClient.setQueryData(['seller_leads', targetUserId], context.previousLeads)
-      }
     }
   })
 
