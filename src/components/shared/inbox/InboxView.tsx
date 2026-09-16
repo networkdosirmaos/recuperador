@@ -6,6 +6,7 @@ import Link from 'next/link'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { sellerService } from '@/services/seller.service'
+import { adminService } from '@/services/admin.service'
 import { useLeadsRealtime } from '@/hooks/useLeadsRealtime'
 import toast from 'react-hot-toast'
 
@@ -137,6 +138,31 @@ export function InboxView({ targetUserId, viewerRole, viewerId }: InboxViewProps
         queryClient.setQueryData(['seller_leads', targetUserId], context.previousLeads)
       }
     }
+  })
+
+  // === ADMIN MUTATIONS ===
+  const removeFromQueueMutation = useMutation({
+    mutationFn: (leadId: string) => adminService.returnSingleLeadToPool(leadId),
+    onSuccess: (_, leadId) => {
+      queryClient.setQueryData(['seller_leads', targetUserId], (old: any) => 
+        old?.filter((l: any) => l.id !== leadId)
+      )
+      if (selectedLeadId === leadId) setSelectedLeadId(null)
+      toast.success('Lead devolvido para a base geral!')
+    },
+    onError: () => toast.error('Falha ao remover lead da fila.')
+  })
+
+  const deleteLeadMutation = useMutation({
+    mutationFn: (leadId: string) => adminService.deleteLeads([leadId]),
+    onSuccess: (_, leadId) => {
+      queryClient.setQueryData(['seller_leads', targetUserId], (old: any) => 
+        old?.filter((l: any) => l.id !== leadId)
+      )
+      if (selectedLeadId === leadId) setSelectedLeadId(null)
+      toast.success('Lead excluído permanentemente!')
+    },
+    onError: () => toast.error('Falha ao excluir lead.')
   })
 
   const handleStatusChange = async (leadId: string, newStatus: string) => {
@@ -370,6 +396,8 @@ export function InboxView({ targetUserId, viewerRole, viewerId }: InboxViewProps
           salesLink={viewerRole === 'collaborator' ? profile?.sales_link : undefined}
           viewerRole={viewerRole}
           canSeeEmail={profile?.can_see_email ?? true}
+          onRemoveFromQueue={viewerRole === 'admin' ? () => removeFromQueueMutation.mutate(selectedLeadId!) : undefined}
+          onDeleteLead={viewerRole === 'admin' ? () => deleteLeadMutation.mutate(selectedLeadId!) : undefined}
         />
       </div>
     </div>

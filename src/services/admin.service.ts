@@ -185,6 +185,19 @@ export const adminService = {
     if (error) throw error
   },
 
+  async returnSingleLeadToPool(leadId: string) {
+    const { error } = await supabase
+      .from('leads')
+      .update({ 
+        current_assignee_id: null, 
+        status: 'novo', 
+        updated_at: new Date().toISOString() 
+      })
+      .eq('id', leadId)
+
+    if (error) throw error
+  },
+
   async updateAffiliateLink(id: string, link: string | null, salesLink?: string | null) {
     const updateData: any = { affiliate_link: link }
     if (salesLink !== undefined) {

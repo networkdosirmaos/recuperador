@@ -15,9 +15,11 @@ interface InboxSidebarProps {
   salesLink?: string;
   viewerRole?: 'admin' | 'collaborator';
   canSeeEmail?: boolean;
+  onRemoveFromQueue?: () => void;
+  onDeleteLead?: () => void;
 }
 
-export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, onSaveNote, affiliateLink, salesLink, viewerRole = 'collaborator', canSeeEmail = true }: InboxSidebarProps) {
+export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, onSaveNote, affiliateLink, salesLink, viewerRole = 'collaborator', canSeeEmail = true, onRemoveFromQueue, onDeleteLead }: InboxSidebarProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [noteText, setNoteText] = useState('')
 
@@ -419,6 +421,42 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
           </label>
           {renderHistory()}
         </div>
+
+        {/* ADMIN ACTIONS */}
+        {viewerRole === 'admin' && (
+          <div className="mt-8 pt-6 border-t border-red-100/50">
+            <h3 className="text-[12px] font-bold text-red-800/80 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <AlertCircle className="w-4 h-4" />
+              Ações de Gestão (Admin)
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              {onRemoveFromQueue && (
+                <button
+                  onClick={() => {
+                    if (window.confirm('Tem certeza que deseja devolver este lead para a base geral? Ele sairá da fila deste vendedor.')) {
+                      onRemoveFromQueue()
+                    }
+                  }}
+                  className="px-3 py-2.5 bg-orange-50 hover:bg-orange-100 text-orange-700 text-sm font-semibold rounded-lg border border-orange-200 transition-colors"
+                >
+                  Remover da Fila
+                </button>
+              )}
+              {onDeleteLead && (
+                <button
+                  onClick={() => {
+                    if (window.confirm('CUIDADO: Tem certeza que deseja APAGAR este lead definitivamente do sistema? Esta ação é irreversível.')) {
+                      onDeleteLead()
+                    }
+                  }}
+                  className="px-3 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 text-sm font-semibold rounded-lg border border-red-200 transition-colors"
+                >
+                  Excluir Lead
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

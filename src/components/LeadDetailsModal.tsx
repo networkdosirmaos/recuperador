@@ -16,10 +16,10 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
   const [activeTab, setActiveTab] = useState<'details' | 'timeline' | 'debug'>('details')
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null)
 
-  const { data: events = [], isLoading: loadingEvents } = useQuery({
-    queryKey: ['lead_events_legacy', lead?.id],
-    queryFn: () => Promise.resolve([]),
-    enabled: false
+  const { data: dbEvents = [], isLoading: loadingEvents } = useQuery({
+    queryKey: ['lead_events', lead?.id],
+    queryFn: () => adminService.getLeadEvents(lead.id),
+    enabled: isOpen && activeTab === 'timeline'
   })
 
   if (!isOpen || !lead) return null
@@ -91,11 +91,9 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
             onClick={() => setActiveTab('timeline')}
           >
             Linha do Tempo
-            {events.length > 0 && (
-              <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'timeline' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'}`}>
-                {events.length}
-              </span>
-            )}
+            {activeTab === 'timeline' && loadingEvents ? (
+              <span className="w-3 h-3 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></span>
+            ) : null}
           </button>
           <button 
             className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'debug' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
@@ -211,10 +209,25 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
           ) : activeTab === 'timeline' ? (
             /* CONTEÚDO DA LINHA DO TEMPO UNIFICADA */
             <div className="relative border-l-2 border-indigo-100 ml-4 space-y-8 pb-4">
-              {!Array.isArray(lead.history_log) || lead.history_log.length === 0 ? (
-                <div className="pl-6 text-sm text-gray-500">Nenhum evento registrado no histórico para este cliente.</div>
-              ) : (
-                [...lead.history_log].reverse().map((ev: any, index: number) => {
+              {(() => {
+                const historyLog = Array.isArray(lead.history_log) ? lead.history_log : []
+                const humanNotes = historyLog.filter((e: any) => e.type === 'HUMAN_NOTE')
+                const formattedEvents = dbEvents.map((ev: any) => ({
+                  type: ev.gateway_event || ev.gateway_status || 'Sistema',
+                  description: ev.reason ? `Status: ${ev.gateway_status} - ${ev.reason}` : `Status: ${ev.gateway_status}`,
+                  reason: ev.reason,
+                  metadata: ev.metadata,
+                  created_at: ev.created_at,
+                  isDbEvent: true
+                }))
+                
+                const combined = [...humanNotes, ...formattedEvents].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+                if (combined.length === 0) {
+                  return <div className="pl-6 text-sm text-gray-500">Nenhum evento registrado no histórico para este cliente.</div>
+                }
+
+                return combined.map((ev: any, index: number) => {
                   const isHumanNote = ev.type === 'HUMAN_NOTE';
                   const isExpanded = expandedEvent === index.toString();
                   
@@ -232,7 +245,7 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
                             <div className="flex items-center gap-2 mb-1">
                               {!isHumanNote && (
                                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border text-gray-700 bg-gray-50 border-gray-200`}>
-                                  EVENTO DE SISTEMA
+                                  EVENTO DA CAKTO
                                 </span>
                               )}
                               {isHumanNote && (
@@ -244,33 +257,45 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
                             </div>
                             <div className="text-xs text-gray-500 flex items-center gap-1.5 mt-1.5">
                               <Calendar className="w-3.5 h-3.5" />
-                              {ev.created_at ? format(new Date(ev.created_at), "dd 'de' MMM, yyyy 'às' HH:mm", { locale: ptBR }) : '-'}
+                              {ev.created_at ? format(new Date(ev.created_at), "dd 'de' MMM, yyyy 'às' HH:mm:ss", { locale: ptBR }) : '-'}
                             </div>
                           </div>
                           
                           <div className="text-gray-400">
-                            {isExpanded ? <span className="text-xs font-medium">Recolher</span> : <span className="text-xs font-medium">Detalhes</span>}
+                            {isExpanded ? <span className="text-xs font-medium">Recolher</span> : <span className="text-xs font-medium text-indigo-600">Ver Payload</span>}
                           </div>
                         </div>
 
                         {isExpanded && (
-                          <div className={`p-4 border-t border-gray-100 text-xs ${isHumanNote ? 'bg-purple-50/50 text-purple-900' : 'bg-gray-50'}`}>
-                            <div className="mb-2">
-                              <span className="block font-semibold text-gray-700 mb-1 uppercase tracking-wider">
-                                {isHumanNote ? 'Conteúdo da Anotação:' : 'Detalhe do Evento / Motivo:'}
-                              </span>
-                              <div className={`font-medium ${isHumanNote ? 'text-purple-800 text-sm whitespace-pre-wrap leading-relaxed' : 'text-gray-700 break-words'}`}>
-                                {ev.description || ev.reason || 'Sem descrição.'}
+                          <div className={`p-4 border-t border-gray-100 text-xs ${isHumanNote ? 'bg-purple-50/50 text-purple-900' : 'bg-gray-900'}`}>
+                            {isHumanNote ? (
+                              <div className="mb-2">
+                                <span className="block font-semibold text-purple-700 mb-1 uppercase tracking-wider">
+                                  Conteúdo da Anotação:
+                                </span>
+                                <div className="font-medium text-purple-800 text-sm whitespace-pre-wrap leading-relaxed">
+                                  {ev.description || 'Sem descrição.'}
+                                </div>
                               </div>
-                            </div>
-                            
-                            {!isHumanNote && ev.metadata && (
-                              <div className="mt-4">
-                                <span className="block font-semibold text-gray-700 mb-1 uppercase tracking-wider">Metadados Técnicos:</span>
-                                <pre className="text-gray-600 font-mono bg-white p-3 rounded border border-gray-200 overflow-x-auto whitespace-pre text-[10px] leading-relaxed max-h-48 overflow-y-auto">
-                                  {JSON.stringify(ev.metadata, null, 2)}
-                                </pre>
-                              </div>
+                            ) : (
+                              <>
+                                <div className="mb-3">
+                                  <span className="block font-semibold text-gray-400 mb-1 uppercase tracking-wider text-[10px]">
+                                    Detalhe Rápido:
+                                  </span>
+                                  <div className="text-gray-200 break-words">
+                                    {ev.description || ev.reason || 'Sem descrição adicional.'}
+                                  </div>
+                                </div>
+                                {ev.metadata && (
+                                  <div>
+                                    <span className="block font-semibold text-gray-400 mb-1 uppercase tracking-wider text-[10px]">Payload Completo (Cakto):</span>
+                                    <pre className="text-green-400 font-mono bg-black/50 p-3 rounded border border-gray-700 overflow-x-auto whitespace-pre text-[10px] leading-relaxed max-h-64 overflow-y-auto">
+                                      {JSON.stringify(ev.metadata, null, 2)}
+                                    </pre>
+                                  </div>
+                                )}
+                              </>
                             )}
                           </div>
                         )}
@@ -278,7 +303,7 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
                     </div>
                   )
                 })
-              )}
+              })()}
             </div>
           ) : (
             /* CONTEÚDO DA ABA DE DEBUG / INTEGRAÇÃO */
