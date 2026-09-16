@@ -254,7 +254,7 @@ export default function ColaboradorDashboard() {
       {/* HEADER DINÂMICO */}
       <div className="mb-6 flex justify-between items-end">
         <div>
-          <h1 className="text-[26px] font-bold text-[#1a1d23] mb-1 tracking-tight">Seu campo de batalha{user?.user_metadata?.name ? `, ${user.user_metadata.name.split(' ')[0]}` : ''}</h1>
+          <h1 className="text-[26px] font-bold text-[#1a1d23] mb-1 tracking-tight">Seu campo de batalha{sessionData?.user?.user_metadata?.name ? `, ${sessionData.user.user_metadata.name.split(' ')[0]}` : ''}</h1>
           <p className="text-[#6b7280] text-[15px]">Aqui está o que exige sua atenção hoje.</p>
         </div>
         <div className="hidden md:flex items-center gap-1 text-[#6b7280] text-sm font-medium cursor-pointer hover:text-gray-900 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
