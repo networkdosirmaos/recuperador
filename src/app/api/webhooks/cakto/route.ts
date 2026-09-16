@@ -77,6 +77,8 @@ export async function POST(req: Request) {
 
     const isPing = event === 'ping' || event === 'test_webhook' || (!nome && !email && !phone)
 
+    const affiliateEmail = mainItem.affiliate || null
+
     // ROLETA, DEDUPLICAÇÃO E HISTÓRICO agora vivem no CoreLeadService
     const { leadId } = await coreLeadService.processWebhookEvent({
       listId,
@@ -94,6 +96,7 @@ export async function POST(req: Request) {
       refundedAt: mainItem.refundedAt || null,
       chargedbackAt: mainItem.chargedbackAt || null,
       refundReason: mainItem.refundReason || mainItem.refund_reason || null,
+      affiliateEmail,
       isPing,
       rawPayload: body
     })

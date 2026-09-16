@@ -17,6 +17,7 @@ export interface NormalizedWebhookPayload {
   refundedAt: string | null
   chargedbackAt: string | null
   refundReason: string | null
+  affiliateEmail?: string | null
   isPing: boolean
   rawPayload: Json
 }
@@ -91,9 +92,35 @@ export const coreLeadService = {
     let finalLeadId = null
     const temperature = (payload.gatewayStatus === 'waiting_payment' || payload.gatewayStatus === 'pending' || payload.event.includes('abandonment')) ? 'quente' : 'frio'
     
-    // FASE 1: Inteligência (Se comprou, limpa a fila = 'recuperado')
+    // FASE 1: Inteligência Básica
     const isApproved = payload.event === 'purchase_approved' || payload.gatewayStatus === 'approved'
     const isRefundOrChargeback = payload.event.includes('refund') || payload.event.includes('chargeback') || payload.gatewayStatus === 'refunded' || payload.gatewayStatus === 'chargeback'
+
+    // FASE 2: O Motor de Comissionamento (Afiliado vs Orgânica)
+    let finalStatus: string | undefined = undefined
+    let finalAssigneeId = existingLead ? existingLead.current_assignee_id : assignedSellerId
+
+    if (isApproved) {
+      if (payload.affiliateEmail) {
+        // Busca se existe algum colaborador com esse email
+        const { data: affiliateProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('id')
+          .eq('email', payload.affiliateEmail)
+          .single()
+
+        if (affiliateProfile) {
+          finalStatus = 'recuperado'
+          finalAssigneeId = affiliateProfile.id // A Regra do Roubo Justo: Quem converteu fica com o lead!
+        } else {
+          finalStatus = 'venda_organica' // Afiliado de fora da equipe
+        }
+      } else {
+        finalStatus = 'venda_organica' // Sem afiliado = Tráfego direto
+      }
+    } else if (isRefundOrChargeback) {
+      finalStatus = 'novo' // Volta pra fila urgente
+    }
 
     let historyLog = []
 
@@ -102,14 +129,6 @@ export const coreLeadService = {
       const { data: leadData } = await supabaseAdmin.from('leads').select('history_log').eq('id', existingLead.id).single()
       if (leadData && Array.isArray(leadData.history_log)) {
         historyLog = leadData.history_log
-      }
-
-      // Se for reembolso/chargeback, forçamos o lead a voltar pra fila (status novo e urgente)
-      let newStatus = undefined
-      if (isApproved) {
-        newStatus = 'venda_organica'
-      } else if (isRefundOrChargeback) {
-        newStatus = 'novo'
       }
 
       // 3A. ATUALIZAR (Upsert)
@@ -124,7 +143,8 @@ export const coreLeadService = {
           temperature: isRefundOrChargeback ? 'quente' : temperature,
           name: payload.nome || undefined,
           product_name: payload.produto !== 'Produto Não Informado' ? payload.produto : undefined,
-          ...(newStatus ? { status: newStatus } : {})
+          ...(finalStatus ? { status: finalStatus } : {}),
+          current_assignee_id: finalAssigneeId
         })
         .eq('id', existingLead.id)
         .select('id')
@@ -151,9 +171,9 @@ export const coreLeadService = {
         gateway_event: payload.event,
         gateway_metadata: payload.rawPayload,
         list_id: payload.listId,
-        status: isApproved ? 'venda_organica' : 'novo',
+        status: finalStatus || 'novo',
         temperature: isRefundOrChargeback ? 'quente' : temperature,
-        current_assignee_id: assignedSellerId 
+        current_assignee_id: finalAssigneeId 
       }
 
       const { data: inserted, error: insertError } = await supabaseAdmin
