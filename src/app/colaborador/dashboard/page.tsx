@@ -48,7 +48,7 @@ export default function ColaboradorDashboard() {
   const isActive = profile?.is_active !== false
 
   // UI States
-  const [selectedTab, setSelectedTab] = useState<'pendentes' | 'em_andamento' | 'fechados'>('pendentes')
+  const [selectedTab, setSelectedTab] = useState<'pendentes' | 'em_andamento' | 'finalizados'>('pendentes')
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
   
   // Relógio Fantasma (atualiza a cada 30 segundos)
@@ -62,9 +62,10 @@ export default function ColaboradorDashboard() {
   const { filteredLeads, groupedLeads, counts } = useMemo(() => {
     let pendentes_count = 0
     let em_andamento_count = 0
-    let fechados_count = 0
+    let finalizados_count = 0
     let coolingDown_count = 0
-    const isApproved = (l: any) => l.status === 'recuperado' // Apenas verdadeiras recuperações
+    const isApproved = (l: any) => l.status === 'recuperado' // Vendas Recuperadas
+    const isLost = (l: any) => l.status === 'perdido' // Vendas Perdidas
     const isOrganic = (l: any) => l.status === 'venda_organica' || l.gateway_event === 'purchase_approved' || l.gateway_status === 'approved'
     
     const isCoolingDown = (l: any) => {
@@ -76,7 +77,7 @@ export default function ColaboradorDashboard() {
 
     const getBucket = (l: any) => {
       if (isOrganic(l)) return 'ignorar' // Venda lisa, some da tela
-      if (isApproved(l)) return 'fechados' // Recuperados reais
+      if (isApproved(l) || isLost(l)) return 'finalizados' // Recuperados reais e Perdidos
       if (isCoolingDown(l)) return 'geladeira'
       // Se é novo OU o retorno está vencido -> PENDENTES (Fogo)
       if (l.status === 'novo' || isPastDue(l)) return 'pendentes'
@@ -86,7 +87,7 @@ export default function ColaboradorDashboard() {
 
     myLeads.forEach((l: any) => {
       const bucket = getBucket(l)
-      if (bucket === 'fechados') fechados_count++
+      if (bucket === 'finalizados') finalizados_count++
       else if (bucket === 'geladeira') coolingDown_count++
       else if (bucket === 'pendentes') pendentes_count++
       else if (bucket === 'em_andamento') em_andamento_count++
@@ -121,7 +122,7 @@ export default function ColaboradorDashboard() {
       counts: { 
         pendentes: pendentes_count, 
         em_andamento: em_andamento_count, 
-        fechados: fechados_count, 
+        finalizados: finalizados_count, 
         coolingDown: coolingDown_count,
         todos_ativos: pendentes_count + em_andamento_count 
       } 
@@ -292,7 +293,7 @@ export default function ColaboradorDashboard() {
       <InboxKPIs 
         pendentes={counts.pendentes} 
         emAndamento={counts.em_andamento} 
-        fechados={counts.fechados}
+        finalizados={counts.finalizados}
         animate={isAnimating}
         activeTab={selectedTab}
         onTabChange={setSelectedTab}
@@ -355,11 +356,11 @@ export default function ColaboradorDashboard() {
                 <p className="text-[#6b7280]">Nenhum cliente em atendimento. Seu foco total deve estar nos pendentes.</p>
               </>
             )}
-            {selectedTab === 'fechados' && (
+            {selectedTab === 'finalizados' && (
               <>
-                <div className="text-5xl mb-4">🏆</div>
-                <h3 className="text-lg font-bold text-[#1a1d23] mb-1">Sala de Troféus</h3>
-                <p className="text-[#6b7280]">Está vazia hoje. Bora fechar a primeira recuperação!</p>
+                <div className="text-5xl mb-4">✅</div>
+                <h3 className="text-lg font-bold text-[#1a1d23] mb-1">Nada Finalizado Hoje</h3>
+                <p className="text-[#6b7280]">Os leads que você encerrar aparecerão aqui.</p>
               </>
             )}
           </div>

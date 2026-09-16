@@ -28,7 +28,6 @@ export const sellerService = {
       .from('leads')
       .select('id, name, phone, email, product_name, status, temperature, updated_at, gateway, gateway_updated_at, payment_method, gateway_status, reason, gateway_event, created_at, next_action_at, notes, history_log')
       .eq('current_assignee_id', userId)
-      .neq('status', 'perdido')
       .order('updated_at', { ascending: false })
       .limit(300)
     if (error) throw error

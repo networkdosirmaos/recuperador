@@ -1,16 +1,16 @@
 import React from 'react'
-import { Flame, Activity, Trophy } from 'lucide-react'
+import { Flame, Activity, CheckCircle2 } from 'lucide-react'
 
 interface InboxKPIsProps {
   pendentes: number;
   emAndamento: number;
-  fechados: number;
+  finalizados: number;
   animate?: boolean;
-  activeTab: 'pendentes' | 'em_andamento' | 'fechados';
-  onTabChange: (tab: 'pendentes' | 'em_andamento' | 'fechados') => void;
+  activeTab: 'pendentes' | 'em_andamento' | 'finalizados';
+  onTabChange: (tab: 'pendentes' | 'em_andamento' | 'finalizados') => void;
 }
 
-export function InboxKPIs({ pendentes, emAndamento, fechados, animate, activeTab, onTabChange }: InboxKPIsProps) {
+export function InboxKPIs({ pendentes, emAndamento, finalizados, animate, activeTab, onTabChange }: InboxKPIsProps) {
   return (
     <div className="flex overflow-x-auto pb-4 md:pb-0 md:grid md:grid-cols-3 gap-3 md:gap-4 mb-8 -mx-4 px-4 md:mx-0 md:px-0 snap-x snap-mandatory scroll-pl-4 md:scroll-pl-0 hide-scrollbar">
       
@@ -50,21 +50,21 @@ export function InboxKPIs({ pendentes, emAndamento, fechados, animate, activeTab
         </div>
       </button>
 
-      {/* 3. Fechados */}
+      {/* 3. Finalizados */}
       <button 
-        onClick={() => onTabChange('fechados')}
+        onClick={() => onTabChange('finalizados')}
         className={`w-[75vw] min-w-[220px] max-w-[280px] shrink-0 snap-start md:w-auto md:min-w-0 md:max-w-none md:shrink text-left bg-white rounded-xl p-4 md:p-5 flex items-center shadow-sm transition-all duration-300 cursor-pointer outline-none focus:outline-none hover:shadow-md ${
-          activeTab === 'fechados' 
+          activeTab === 'finalizados' 
             ? 'ring-2 ring-[#10b981] border-transparent md:scale-[1.02]' 
             : 'border border-[#e5e7eb] opacity-80 hover:opacity-100'
         }`}
       >
-        <div className={`w-10 h-10 md:w-[46px] md:h-[46px] rounded-full flex items-center justify-center flex-shrink-0 mr-3 md:mr-4 transition-colors ${activeTab === 'fechados' ? 'bg-[#10b981] text-white shadow-sm' : 'bg-[#ecfdf5] text-[#10b981]'}`}>
-          <Trophy className="w-5 h-5 md:w-[22px] md:h-[22px]" />
+        <div className={`w-10 h-10 md:w-[46px] md:h-[46px] rounded-full flex items-center justify-center flex-shrink-0 mr-3 md:mr-4 transition-colors ${activeTab === 'finalizados' ? 'bg-[#10b981] text-white shadow-sm' : 'bg-[#ecfdf5] text-[#10b981]'}`}>
+          <CheckCircle2 className="w-5 h-5 md:w-[22px] md:h-[22px]" />
         </div>
         <div>
-          <div className="text-xl md:text-[26px] font-bold text-[#1a1d23] leading-none">{fechados}</div>
-          <div className="text-[12px] md:text-[13px] text-[#6b7280] font-medium mt-1">fechados hoje</div>
+          <div className="text-xl md:text-[26px] font-bold text-[#1a1d23] leading-none">{finalizados}</div>
+          <div className="text-[12px] md:text-[13px] text-[#6b7280] font-medium mt-1">finalizados</div>
         </div>
       </button>
     </div>

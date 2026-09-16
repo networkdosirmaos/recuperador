@@ -65,8 +65,20 @@ export function InboxLeadCard({ lead, isSelected, onClick }: InboxLeadCardProps)
             </span>
           )}
 
-          {/* CRM Status Oculto em Recuperados se preferir, mas vamos manter */}
-          {lead.status !== 'novo' && lead.status !== 'recuperado' && (
+          {/* Badges de Resultado Final (Recuperado / Perdido) */}
+          {lead.status === 'recuperado' && (
+             <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-[#ecfdf5] text-[#10b981] border border-[#10b981] border-opacity-20 flex items-center gap-1">
+               🏆 RECUPERADO
+             </span>
+          )}
+          {lead.status === 'perdido' && (
+             <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-[#fef2f2] text-[#ef4444] border border-[#ef4444] border-opacity-20 flex items-center gap-1">
+               💀 PERDIDO
+             </span>
+          )}
+
+          {/* CRM Status Oculto se já finalizado */}
+          {lead.status !== 'novo' && lead.status !== 'recuperado' && lead.status !== 'perdido' && (
              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-[#eff6ff] text-[#3b82f6]">
                {lead.status.replace('_', ' ')}
              </span>
