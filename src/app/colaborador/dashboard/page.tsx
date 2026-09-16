@@ -268,7 +268,7 @@ export default function ColaboradorDashboard() {
       {/* HEADER DINÂMICO */}
       <div className="mb-6 flex justify-between items-end">
         <div>
-          <h1 className="text-[26px] font-bold text-[#1a1d23] mb-1 tracking-tight">Seu campo de batalha{sessionData?.user?.user_metadata?.name ? `, ${sessionData.user.user_metadata.name.split(' ')[0]}` : ''}</h1>
+          <h1 className="text-[26px] font-bold text-[#1a1d23] mb-1 tracking-tight">Central de Leads{sessionData?.user?.user_metadata?.name ? `, ${sessionData.user.user_metadata.name.split(' ')[0]}` : ''}</h1>
           <p className="text-[#6b7280] text-[15px]">Aqui está o que exige sua atenção hoje.</p>
         </div>
         <div className="hidden md:flex items-center gap-1 text-[#6b7280] text-sm font-medium cursor-pointer hover:text-gray-900 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
@@ -333,7 +333,7 @@ export default function ColaboradorDashboard() {
               <>
                 <div className="text-5xl mb-4">🔥</div>
                 <h3 className="text-lg font-bold text-[#1a1d23] mb-1">Inbox Zero Alcançado!</h3>
-                <p className="text-[#6b7280]">Você limpou o seu campo de batalha. Respire um pouco ou puxe novos leads.</p>
+                <p className="text-[#6b7280]">Você limpou a sua Central de Leads. Respire um pouco ou puxe novos leads.</p>
               </>
             )}
             {selectedTab === 'em_andamento' && (
@@ -356,7 +356,7 @@ export default function ColaboradorDashboard() {
 
       {/* Sidebar Fixo */}
       <div className={`fixed inset-0 z-40 bg-black/20 backdrop-blur-sm transition-opacity md:hidden ${selectedLeadId ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setSelectedLeadId(null)}></div>
-      <div className={`fixed inset-y-0 right-0 z-50 transform transition-transform duration-300 ${selectedLeadId ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`fixed inset-y-0 right-0 z-50 w-full md:w-[450px] transform transition-transform duration-300 ${selectedLeadId ? 'translate-x-0' : 'translate-x-full'}`}>
         <InboxSidebar 
           lead={selectedLeadData} 
           onClose={() => setSelectedLeadId(null)} 

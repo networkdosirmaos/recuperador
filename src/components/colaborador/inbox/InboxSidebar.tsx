@@ -175,7 +175,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
   }
 
   return (
-    <div className="fixed inset-y-0 right-0 w-full md:w-[450px] bg-white shadow-2xl border-l border-[#e5e7eb] z-50 flex flex-col transform transition-transform duration-300">
+    <div className="h-full bg-white shadow-2xl border-l border-[#e5e7eb] flex flex-col">
       
       {/* Header */}
       <div className="flex items-start justify-between p-6 pb-4">

@@ -49,14 +49,14 @@ export default function ColaboradorLayout({ children }: { children: ReactNode })
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center">
+            <div className="flex items-center gap-2 md:gap-3 overflow-hidden">
+              <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center flex-shrink-0">
                 <Target className="w-5 h-5 text-indigo-600" />
               </div>
-              <span className="text-lg font-bold text-gray-900 flex items-center gap-3">
-                Recuperador do Papai 
-                <span className="text-gray-300 font-light">|</span>
-                <span className="font-normal text-gray-500">Minha fila</span>
+              <span className="text-base md:text-lg font-bold text-gray-900 flex items-center gap-2 md:gap-3 truncate">
+                <span className="truncate">Recuperador do Papai</span>
+                <span className="text-gray-300 font-light hidden sm:inline">|</span>
+                <span className="font-normal text-gray-500 hidden sm:inline truncate">Central de Leads</span>
               </span>
             </div>
             <div className="flex items-center">
