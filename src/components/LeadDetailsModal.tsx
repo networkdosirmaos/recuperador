@@ -17,9 +17,9 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null)
 
   const { data: events = [], isLoading: loadingEvents } = useQuery({
-    queryKey: ['lead_events', lead?.id],
-    queryFn: () => adminService.getLeadEvents(lead?.id),
-    enabled: isOpen && !!lead?.id
+    queryKey: ['lead_events_legacy', lead?.id],
+    queryFn: () => Promise.resolve([]),
+    enabled: false
   })
 
   if (!isOpen || !lead) return null
@@ -209,39 +209,42 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
               )}
             </>
           ) : activeTab === 'timeline' ? (
-            /* CONTEÚDO DA LINHA DO TEMPO */
+            /* CONTEÚDO DA LINHA DO TEMPO UNIFICADA */
             <div className="relative border-l-2 border-indigo-100 ml-4 space-y-8 pb-4">
-              {loadingEvents ? (
-                <div className="pl-6 text-sm text-gray-500 flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
-                  Buscando histórico...
-                </div>
-              ) : events.length === 0 ? (
+              {!Array.isArray(lead.history_log) || lead.history_log.length === 0 ? (
                 <div className="pl-6 text-sm text-gray-500">Nenhum evento registrado no histórico para este cliente.</div>
               ) : (
-                events.map((ev: any, index: number) => {
-                  const isExpanded = expandedEvent === ev.id;
+                [...lead.history_log].reverse().map((ev: any, index: number) => {
+                  const isHumanNote = ev.type === 'HUMAN_NOTE';
+                  const isExpanded = expandedEvent === index.toString();
                   
                   return (
-                    <div key={ev.id} className="relative pl-6 transition-all duration-200">
+                    <div key={index} className="relative pl-6 transition-all duration-200">
                       {/* Bolinha na linha do tempo */}
-                      <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-white ${index === 0 ? 'bg-indigo-600 shadow-[0_0_0_3px_rgba(79,70,229,0.2)]' : 'bg-gray-300'}`}></div>
+                      <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-white ${index === 0 ? (isHumanNote ? 'bg-purple-500 shadow-[0_0_0_3px_rgba(168,85,247,0.2)]' : 'bg-indigo-600 shadow-[0_0_0_3px_rgba(79,70,229,0.2)]') : 'bg-gray-300'}`}></div>
                       
                       <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden hover:border-indigo-200 transition-colors">
                         <div 
                           className="p-4 cursor-pointer flex items-start justify-between gap-4"
-                          onClick={() => setExpandedEvent(isExpanded ? null : ev.id)}
+                          onClick={() => setExpandedEvent(isExpanded ? null : index.toString())}
                         >
                           <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${getStatusColor(ev.gateway_status)}`}>
-                                {ev.gateway_status || 'UNKNOWN'}
-                              </span>
-                              <span className="text-sm font-semibold text-gray-900">{ev.gateway_event}</span>
+                              {!isHumanNote && (
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border text-gray-700 bg-gray-50 border-gray-200`}>
+                                  EVENTO DE SISTEMA
+                                </span>
+                              )}
+                              {isHumanNote && (
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border text-purple-700 bg-purple-50 border-purple-200`}>
+                                  ANOTAÇÃO DO COLABORADOR
+                                </span>
+                              )}
+                              <span className="text-sm font-semibold text-gray-900">{isHumanNote ? 'Comentário Adicionado' : (ev.type || 'Evento')}</span>
                             </div>
                             <div className="text-xs text-gray-500 flex items-center gap-1.5 mt-1.5">
                               <Calendar className="w-3.5 h-3.5" />
-                              {format(new Date(ev.created_at), "dd 'de' MMM, yyyy 'às' HH:mm", { locale: ptBR })}
+                              {ev.created_at ? format(new Date(ev.created_at), "dd 'de' MMM, yyyy 'às' HH:mm", { locale: ptBR }) : '-'}
                             </div>
                           </div>
                           
@@ -251,21 +254,24 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
                         </div>
 
                         {isExpanded && (
-                          <div className="bg-gray-50 p-4 border-t border-gray-100 text-xs">
-                            {ev.reason && (
-                              <div className="mb-4">
-                                <span className="block font-semibold text-gray-700 mb-1 uppercase tracking-wider">Motivo / Log:</span>
-                                <div className="text-red-700 font-mono bg-red-50 p-2 rounded border border-red-100 break-words whitespace-pre-wrap">
-                                  {ev.reason}
-                                </div>
+                          <div className={`p-4 border-t border-gray-100 text-xs ${isHumanNote ? 'bg-purple-50/50 text-purple-900' : 'bg-gray-50'}`}>
+                            <div className="mb-2">
+                              <span className="block font-semibold text-gray-700 mb-1 uppercase tracking-wider">
+                                {isHumanNote ? 'Conteúdo da Anotação:' : 'Detalhe do Evento / Motivo:'}
+                              </span>
+                              <div className={`font-medium ${isHumanNote ? 'text-purple-800 text-sm whitespace-pre-wrap leading-relaxed' : 'text-gray-700 break-words'}`}>
+                                {ev.description || ev.reason || 'Sem descrição.'}
+                              </div>
+                            </div>
+                            
+                            {!isHumanNote && ev.metadata && (
+                              <div className="mt-4">
+                                <span className="block font-semibold text-gray-700 mb-1 uppercase tracking-wider">Metadados Técnicos:</span>
+                                <pre className="text-gray-600 font-mono bg-white p-3 rounded border border-gray-200 overflow-x-auto whitespace-pre text-[10px] leading-relaxed max-h-48 overflow-y-auto">
+                                  {JSON.stringify(ev.metadata, null, 2)}
+                                </pre>
                               </div>
                             )}
-                            <div>
-                              <span className="block font-semibold text-gray-700 mb-1 uppercase tracking-wider">Payload Bruto (JSON):</span>
-                              <pre className="text-gray-600 font-mono bg-white p-3 rounded border border-gray-200 overflow-x-auto whitespace-pre text-[10px] leading-relaxed max-h-48 overflow-y-auto">
-                                {JSON.stringify(ev.metadata, null, 2)}
-                              </pre>
-                            </div>
                           </div>
                         )}
                       </div>

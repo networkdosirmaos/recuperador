@@ -19,7 +19,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
 
   useEffect(() => {
     if (lead) {
-      setNoteText(lead.notes || '')
+      setNoteText('') // Sempre iniciar vazio para empilhar novos comentários
     }
   }, [lead])
 
@@ -75,11 +75,12 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
   }
 
   const saveNote = async () => {
-    if (noteText.trim() === (lead.notes || '').trim()) return;
+    if (!noteText.trim()) return;
     setIsUpdating(true)
     try {
       await onSaveNote(lead.id!, noteText)
-      toast.success('Anotação salva!')
+      toast.success('Anotação salva no histórico!')
+      setNoteText('') // Limpa a caixa após salvar
     } finally {
       setIsUpdating(false)
     }
@@ -97,8 +98,15 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
           let bgClass = 'bg-[#f3f4f6]'
           let textClass = 'text-[#6b7280]'
           let borderClass = 'border-[#e5e7eb]'
+          let isHumanNote = false
 
-          if (log.type === 'pix_generated' || log.type === 'pix_gerado' || log.type === 'waiting_payment') {
+          if (log.type === 'HUMAN_NOTE') {
+            Icon = MessageCircle
+            bgClass = 'bg-[#f3e8ff]'
+            textClass = 'text-[#7e22ce]'
+            borderClass = 'border-[#9333ea]'
+            isHumanNote = true
+          } else if (log.type === 'pix_generated' || log.type === 'pix_gerado' || log.type === 'waiting_payment') {
             Icon = QrCode
             bgClass = 'bg-[#f5f3ff]'
             textClass = 'text-[#7c3aed]'
@@ -137,16 +145,20 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
               </span>
               <div className="pt-1">
                 <p className={`text-[13px] font-bold ${textClass}`}>
-                  {(log.type === 'pix_generated' || log.type === 'pix_gerado' || log.type === 'waiting_payment') ? 'PIX Gerado' :
+                  {isHumanNote ? 'Sua Anotação' : (log.type === 'pix_generated' || log.type === 'pix_gerado' || log.type === 'waiting_payment') ? 'PIX Gerado' :
                    log.type === 'purchase_refused' ? 'Cartão Recusado' :
-                   log.type === 'checkout_abandoned' ? 'Abandono de Carrinho' :
-                   log.type === 'purchase_approved' ? 'Compra Aprovada!' :
+                   log.type === 'checkout_abandoned' ? 'Carrinho Abandonado' :
+                   log.type === 'purchase_approved' ? 'Compra Aprovada' :
                    log.type?.includes('refund') ? 'Reembolso Solicitado' :
-                   log.type?.includes('chargeback') ? 'Chargeback / Disputa' :
-                   (log.type || 'Evento')}
+                   log.type?.includes('chargeback') ? 'Chargeback' :
+                   'Evento Registrado'}
                 </p>
-                <p className="text-[13px] text-[#374151] mt-0.5">{log.description}</p>
-                <p className="text-[12px] text-[#9ca3af] mt-1">{new Date(log.created_at).toLocaleString('pt-BR')}</p>
+                <div className={`mt-1 text-[13px] leading-relaxed ${isHumanNote ? 'text-gray-800 bg-[#f3e8ff] p-3 rounded-lg rounded-tl-none border border-[#e9d5ff] inline-block shadow-sm' : 'text-[#4b5563]'}`}>
+                  {log.description || 'Sem detalhes'}
+                </div>
+                <span className="block text-[11px] text-[#9ca3af] mt-1.5 font-medium">
+                  {log.created_at ? formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR }) : 'Desconhecido'}
+                </span>
               </div>
             </div>
           )
@@ -281,7 +293,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
           </div>
           <button 
             onClick={saveNote}
-            disabled={isUpdating || noteText.trim() === (lead.notes || '').trim()}
+            disabled={isUpdating || !noteText.trim()}
             className="mt-3 px-4 py-2 bg-[#f5f3ff] hover:bg-[#ede9fe] text-[#7c3aed] font-semibold text-[13px] rounded-lg transition-colors disabled:opacity-50"
           >
             Salvar anotação

@@ -180,14 +180,15 @@ export default function ColaboradorDashboard() {
     }
   })
 
-  const updateNoteMutation = useMutation({
-    mutationFn: ({ leadId, notes }: { leadId: string, notes: string }) => 
-      sellerService.updateNote(leadId, notes),
-    onMutate: async ({ leadId, notes }) => {
+  const addNoteMutation = useMutation({
+    mutationFn: ({ leadId, newHistory }: { leadId: string, newHistory: any[] }) => 
+      sellerService.updateHistoryLog(leadId, newHistory),
+    onMutate: async ({ leadId, newHistory }) => {
       await queryClient.cancelQueries({ queryKey: ['seller_leads', userId] })
       const previousLeads = queryClient.getQueryData(['seller_leads', userId])
+      
       queryClient.setQueryData(['seller_leads', userId], (old: any) => 
-        old?.map((l: any) => l.id === leadId ? { ...l, notes } : l)
+        old?.map((l: any) => l.id === leadId ? { ...l, history_log: newHistory } : l)
       )
       return { previousLeads }
     },
@@ -207,8 +208,21 @@ export default function ColaboradorDashboard() {
     await updateScheduleMutation.mutateAsync({ leadId, nextActionAt })
   }
 
-  const handleSaveNote = async (leadId: string, notes: string) => {
-    await updateNoteMutation.mutateAsync({ leadId, notes })
+  const handleSaveNote = async (leadId: string, text: string) => {
+    const leads: any[] = queryClient.getQueryData(['seller_leads', userId]) || []
+    const lead = leads.find(l => l.id === leadId)
+    if (!lead) return
+
+    const newEvent = {
+      type: 'HUMAN_NOTE',
+      description: text,
+      created_at: new Date().toISOString()
+    }
+    
+    const currentHistory = Array.isArray(lead.history_log) ? lead.history_log : []
+    const newHistory = [...currentHistory, newEvent]
+
+    await addNoteMutation.mutateAsync({ leadId, newHistory })
   }
 
   if (loading) {
