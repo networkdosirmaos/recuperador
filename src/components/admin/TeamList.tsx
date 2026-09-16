@@ -1,4 +1,4 @@
-import { PauseCircle, PlayCircle, RefreshCw } from 'lucide-react'
+import { PauseCircle, PlayCircle, RefreshCw, Link2 } from 'lucide-react'
 
 export type TeamMemberStat = {
   id: string
@@ -7,18 +7,20 @@ export type TeamMemberStat = {
   is_active: boolean
   in_progress: number
   recovered: number
+  affiliate_link?: string
 }
 
 interface TeamListProps {
   members: TeamMemberStat[]
   onToggleStatus: (id: string, currentStatus: boolean) => Promise<void>
   onReturnLeads: (id: string) => Promise<void>
+  onEditLink?: (member: TeamMemberStat) => void
 }
 
-export function TeamList({ members, onToggleStatus, onReturnLeads }: TeamListProps) {
+export function TeamList({ members, onToggleStatus, onReturnLeads, onEditLink }: TeamListProps) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-      <div className="px-6 py-5 border-b border-gray-200">
+      <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
         <h3 className="text-lg font-semibold text-gray-900">Membros da Equipe</h3>
       </div>
       
@@ -42,8 +44,17 @@ export function TeamList({ members, onToggleStatus, onReturnLeads }: TeamListPro
               {members.map((member) => (
                 <tr key={member.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4">
-                    <p className="font-semibold text-gray-900">{member.name || member.email}</p>
-                    {member.name && <p className="text-xs text-gray-400 mt-0.5">{member.email}</p>}
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <p className="font-semibold text-gray-900">{member.name || member.email}</p>
+                        {member.name && <p className="text-xs text-gray-400 mt-0.5">{member.email}</p>}
+                      </div>
+                      {member.affiliate_link && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                          <Link2 className="w-3 h-3" /> Link Salvo
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
@@ -58,38 +69,50 @@ export function TeamList({ members, onToggleStatus, onReturnLeads }: TeamListPro
                   <td className="px-6 py-4 font-bold text-green-600">
                     {member.recovered}
                   </td>
-                  <td className="px-6 py-4 text-right space-x-3">
-                    {member.in_progress > 0 && (
-                      <button
-                        onClick={() => {
-                          if(confirm('Tem certeza que deseja tirar os leads deste vendedor e devolver para a fila global?')) {
-                            onReturnLeads(member.id)
-                          }
-                        }}
-                        className="text-orange-600 hover:text-orange-800 transition-colors inline-flex items-center"
-                        title="Devolver leads para a fila"
-                      >
-                        <RefreshCw className="w-4 h-4 mr-1" />
-                        Devolver Leads
-                      </button>
-                    )}
-                    
-                    <button
-                      onClick={() => onToggleStatus(member.id, member.is_active)}
-                      className={`inline-flex items-center transition-colors ${
-                        member.is_active ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'
-                      }`}
-                    >
-                      {member.is_active ? (
-                        <>
-                          <PauseCircle className="w-4 h-4 mr-1" /> Pausar
-                        </>
-                      ) : (
-                        <>
-                          <PlayCircle className="w-4 h-4 mr-1" /> Ativar
-                        </>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex justify-end gap-2">
+                      {onEditLink && (
+                        <button
+                          onClick={() => onEditLink(member)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 transition-colors shadow-sm"
+                        >
+                          <Link2 className="w-4 h-4" />
+                          Link
+                        </button>
                       )}
-                    </button>
+                      {member.in_progress > 0 && (
+                        <button
+                          onClick={() => {
+                            if(confirm('Tem certeza que deseja tirar os leads deste vendedor e devolver para a fila global?')) {
+                              onReturnLeads(member.id)
+                            }
+                          }}
+                          className="text-orange-600 hover:text-orange-800 transition-colors inline-flex items-center"
+                          title="Devolver leads para a fila"
+                        >
+                          <RefreshCw className="w-4 h-4 mr-1" />
+                          Devolver Leads
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onToggleStatus(member.id, member.is_active)}
+                        className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+                          member.is_active 
+                            ? 'text-red-600 hover:bg-red-50 border-red-200' 
+                            : 'text-green-600 hover:bg-green-50 border-green-200'
+                        }`}
+                      >
+                        {member.is_active ? (
+                          <>
+                            <PauseCircle className="w-4 h-4 mr-1.5" /> Pausar
+                          </>
+                        ) : (
+                          <>
+                            <PlayCircle className="w-4 h-4 mr-1.5" /> Ativar
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

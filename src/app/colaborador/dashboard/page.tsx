@@ -363,6 +363,7 @@ export default function ColaboradorDashboard() {
           onUpdateStatus={handleStatusChange}
           onScheduleAction={handleScheduleAction}
           onSaveNote={handleSaveNote}
+          affiliateLink={profile?.affiliate_link}
         />
       </div>
     </div>

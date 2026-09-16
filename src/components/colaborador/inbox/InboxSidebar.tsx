@@ -11,9 +11,10 @@ interface InboxSidebarProps {
   onUpdateStatus: (leadId: string, status: string) => Promise<void>;
   onScheduleAction: (leadId: string, nextActionAt: string | null) => Promise<void>;
   onSaveNote: (leadId: string, notes: string) => Promise<void>;
+  affiliateLink?: string;
 }
 
-export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, onSaveNote }: InboxSidebarProps) {
+export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, onSaveNote, affiliateLink }: InboxSidebarProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [noteText, setNoteText] = useState('')
 
@@ -257,6 +258,20 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
           <MessageCircle className="w-[18px] h-[18px]" />
           Chamar {lead.name?.split(' ')[0]} no WhatsApp
         </button>
+
+        {/* Affiliate Link Copy Button */}
+        {affiliateLink && (
+          <button 
+            onClick={() => {
+              navigator.clipboard.writeText(affiliateLink)
+              toast.success('Link de afiliado copiado!')
+            }}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#f5f3ff] hover:bg-[#ede9fe] text-[#7c3aed] font-bold rounded-lg transition-colors border border-[#ddd6fe] shadow-sm text-[14px]"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            Copiar Meu Link de Pagamento
+          </button>
+        )}
 
         {/* Status Form */}
         <div>
