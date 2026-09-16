@@ -17,7 +17,7 @@ import { useLeadGamification } from '@/hooks/useLeadGamification'
 import { useLeadBuckets } from '@/hooks/useLeadBuckets'
 import { GroupedVirtuoso } from 'react-virtuoso'
 import { updateLeadStatusSecure, appendLeadHistorySecure, updateNextActionSecure } from '@/app/actions/lead.actions'
-
+import { returnSingleLeadToPoolSecure, deleteLeadsSecure } from '@/app/actions/admin.actions'
 interface InboxViewProps {
   targetUserId: string;
   viewerRole: 'admin' | 'collaborator';
@@ -142,7 +142,7 @@ export function InboxView({ targetUserId, viewerRole, viewerId }: InboxViewProps
 
   // === ADMIN MUTATIONS ===
   const removeFromQueueMutation = useMutation({
-    mutationFn: (leadId: string) => adminService.returnSingleLeadToPool(leadId),
+    mutationFn: (leadId: string) => returnSingleLeadToPoolSecure(leadId),
     onSuccess: (_, leadId) => {
       queryClient.setQueryData(['seller_leads', targetUserId], (old: any) => 
         old?.filter((l: any) => l.id !== leadId)
@@ -154,7 +154,7 @@ export function InboxView({ targetUserId, viewerRole, viewerId }: InboxViewProps
   })
 
   const deleteLeadMutation = useMutation({
-    mutationFn: (leadId: string) => adminService.deleteLeads([leadId]),
+    mutationFn: (leadId: string) => deleteLeadsSecure([leadId]),
     onSuccess: (_, leadId) => {
       queryClient.setQueryData(['seller_leads', targetUserId], (old: any) => 
         old?.filter((l: any) => l.id !== leadId)

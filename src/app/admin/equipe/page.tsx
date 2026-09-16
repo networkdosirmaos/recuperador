@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { adminService } from '@/services/admin.service'
+import { toggleCollaboratorStatusSecure, returnCollaboratorLeadsSecure, toggleEmailVisibilitySecure, updateAffiliateLinkSecure } from '@/app/actions/admin.actions'
 import { TeamList, TeamMemberStat } from '@/components/admin/TeamList'
 
 export default function EquipeDashboard() {
@@ -28,7 +29,7 @@ export default function EquipeDashboard() {
     try {
       // Optimistic update
       setTeam(prev => prev.map(m => m.id === id ? { ...m, is_active: !currentStatus } : m))
-      await adminService.toggleCollaboratorStatus(id, currentStatus)
+      await toggleCollaboratorStatusSecure(id, currentStatus)
     } catch (error) {
       console.error('Erro ao alternar status:', error)
       alert('Não foi possível alterar o status.')
@@ -38,7 +39,7 @@ export default function EquipeDashboard() {
 
   const handleReturnLeads = async (id: string) => {
     try {
-      await adminService.returnCollaboratorLeads(id)
+      await returnCollaboratorLeadsSecure(id)
       alert('Leads devolvidos para a fila com sucesso!')
       fetchTeam()
     } catch (error) {
@@ -50,7 +51,7 @@ export default function EquipeDashboard() {
   const handleToggleEmail = async (id: string, currentStatus: boolean) => {
     try {
       setTeam(prev => prev.map(m => m.id === id ? { ...m, can_see_email: !currentStatus } : m))
-      await adminService.toggleEmailVisibility(id, currentStatus)
+      await toggleEmailVisibilitySecure(id, currentStatus)
     } catch (error) {
       console.error('Erro ao alternar visibilidade do e-mail:', error)
       alert('Não foi possível alterar a visibilidade do e-mail.')
@@ -73,7 +74,7 @@ export default function EquipeDashboard() {
     if (!editingLinkMember) return
     setIsSavingLink(true)
     try {
-      await adminService.updateAffiliateLink(editingLinkMember.id, linkInput.trim() || null, salesLinkInput.trim() || null)
+      await updateAffiliateLinkSecure(editingLinkMember.id, linkInput.trim() || null, salesLinkInput.trim() || null)
       setTeam(prev => prev.map(m => m.id === editingLinkMember.id ? { 
         ...m, 
         affiliate_link: linkInput.trim() || undefined,

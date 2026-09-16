@@ -14,6 +14,7 @@ import { AdminTransferModal } from './components/AdminTransferModal'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminService } from '@/services/admin.service'
+import { assignMultipleLeadsSecure, deleteLeadsSecure } from '@/app/actions/admin.actions'
 import type { LeadRow, ProfileRow } from '@/types/database.types'
 import toast from 'react-hot-toast'
 
@@ -74,7 +75,7 @@ function BaseDeLeadsContent() {
   // Mutations
   const assignMultipleLeadsMutation = useMutation({
     mutationFn: ({ leadIds, collabId }: { leadIds: string[], collabId: string | null }) => 
-      adminService.assignMultipleLeads(leadIds, collabId),
+      assignMultipleLeadsSecure(leadIds, collabId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin_leads'] })
       queryClient.invalidateQueries({ queryKey: ['admin_collaborators'] })
@@ -92,7 +93,7 @@ function BaseDeLeadsContent() {
   const [selectedLeads, setSelectedLeads] = useState<string[]>([])
 
   const deleteLeadsMutation = useMutation({
-    mutationFn: (leadIds: string[]) => adminService.deleteLeads(leadIds),
+    mutationFn: (leadIds: string[]) => deleteLeadsSecure(leadIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin_leads'] })
       setSelectedLeads([])

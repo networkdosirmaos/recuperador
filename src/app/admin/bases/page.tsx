@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import { CsvUploader } from '@/components/upload/CsvUploader'
 import { ColumnMapper } from '@/components/upload/ColumnMapper'
 import { adminService } from '@/services/admin.service'
+import { assignListOwnerSecure, deleteListCascadeSecure } from '@/app/actions/admin.actions'
 import toast from 'react-hot-toast'
 
 type ViewMode = 'LIST' | 'SELECT_FILE' | 'MAPPING' | 'UPLOADING' | 'SUCCESS'
@@ -122,7 +123,7 @@ export default function BasesPage() {
     if (!ownerModal.listId) return
     setIsAssigning(true)
     try {
-      await adminService.assignListOwner(ownerModal.listId, selectedCollab === 'none' ? null : selectedCollab)
+      await assignListOwnerSecure(ownerModal.listId, selectedCollab === 'none' ? null : selectedCollab)
       toast.success('Dono atribuído e leads atualizados!')
       setOwnerModal({ isOpen: false, listId: null })
       fetchLists()
@@ -142,25 +143,12 @@ export default function BasesPage() {
     try {
       setDeletingId(list.id)
       
-      const { error: deleteLeadsError } = await supabase
-        .from('leads')
-        .delete()
-        .eq('list_id', list.id)
-        
-      if (deleteLeadsError) throw deleteLeadsError
-
-      const { error: deleteListError } = await supabase
-        .from('lead_lists')
-        .delete()
-        .eq('id', list.id)
-
-      if (deleteListError) throw deleteListError
-
-      toast.success('Pasta e leads apagados com sucesso.')
-      await fetchLists()
-    } catch (error) {
-      console.error('Erro ao deletar em cascata:', error)
-      toast.error('Erro ao excluir a base.')
+      await deleteListCascadeSecure(list.id)
+      
+      toast.success('Lista e leads apagados com sucesso!')
+      fetchLists()
+    } catch (err: any) {
+      toast.error('Erro ao deletar lista: ' + err.message)
     } finally {
       setDeletingId(null)
     }
