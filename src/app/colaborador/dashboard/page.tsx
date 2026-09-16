@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
-import { AlertCircle, ChevronDown, RefreshCw } from 'lucide-react'
+import { AlertCircle, ChevronDown, RefreshCw, Check } from 'lucide-react'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { sellerService } from '@/services/seller.service'
@@ -53,6 +53,17 @@ export default function ColaboradorDashboard() {
   // UI States
   const [selectedTab, setSelectedTab] = useState<'pendentes' | 'em_andamento' | 'finalizados'>('pendentes')
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
+  const [showRefreshSuccess, setShowRefreshSuccess] = useState(false)
+
+  const handleRefresh = async () => {
+    await refetch()
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate(50) // Micro-vibração sutil
+    }
+    setShowRefreshSuccess(true)
+    setTimeout(() => setShowRefreshSuccess(false), 2000)
+  }
+
   
   // Lógica de Negócio Modularizada
   const { filteredLeads, groupedLeads, counts } = useLeadBuckets(myLeads, selectedTab)
@@ -227,13 +238,25 @@ export default function ColaboradorDashboard() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {/* Mensagem sutil de sucesso */}
+          {showRefreshSuccess && (
+            <span className="text-xs font-medium text-emerald-600 animate-in fade-in slide-in-from-right-2 duration-300">
+              Atualizada
+            </span>
+          )}
+
           {/* Botão de Refresh (Mobile e Desktop) */}
           <button
-            onClick={() => refetch()}
-            className="flex items-center justify-center p-2.5 md:p-2 text-[#6b7280] hover:text-indigo-600 bg-white rounded-lg border border-gray-200 shadow-sm transition-colors"
+            onClick={handleRefresh}
+            disabled={isFetching}
+            className={`flex items-center justify-center p-2.5 md:p-2 bg-white rounded-lg border shadow-sm transition-colors ${showRefreshSuccess ? 'border-emerald-200 text-emerald-600' : 'border-gray-200 text-[#6b7280] hover:text-indigo-600'}`}
             title="Atualizar fila"
           >
-            <RefreshCw className={`w-5 h-5 md:w-4 md:h-4 ${isFetching ? 'animate-spin text-indigo-600' : ''}`} />
+            {showRefreshSuccess ? (
+              <Check className="w-5 h-5 md:w-4 md:h-4" />
+            ) : (
+              <RefreshCw className={`w-5 h-5 md:w-4 md:h-4 ${isFetching ? 'animate-spin text-indigo-600' : ''}`} />
+            )}
           </button>
 
           <div className="hidden md:flex items-center gap-1 text-[#6b7280] text-sm font-medium cursor-pointer hover:text-gray-900 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
