@@ -11,20 +11,30 @@ export default function ColaboradorLayout({ children }: { children: ReactNode })
 
   useEffect(() => {
     async function checkRole() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        if (authError || !user) {
+          router.push('/login')
+          return
+        }
+        
+        const { data, error } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+        
+        if (error || !data) {
+          router.push('/login')
+          return
+        }
+
+        if (data.role === 'admin') {
+          router.push('/admin/dashboard')
+        } else if (data.role !== 'collaborator') {
+          router.push('/login')
+        } else {
+          setIsAuthorized(true)
+        }
+      } catch (err) {
+        console.error('Erro na verificação de papel:', err)
         router.push('/login')
-        return
-      }
-      
-      const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-      if (data?.role === 'admin') {
-        router.push('/admin/dashboard') // Se admin cair na tela de colaborador, manda pro admin. 
-        // OBS: Se quiser que admin tbm veja a tela de colab, mudar a lógica para aceitar ambos. Mas o melhor é direcionar.
-      } else if (data?.role !== 'collaborator') {
-        router.push('/login')
-      } else {
-        setIsAuthorized(true)
       }
     }
     checkRole()
