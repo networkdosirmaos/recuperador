@@ -13,7 +13,8 @@ import {
   Webhook,
   Folder,
   Menu,
-  X
+  X,
+  BookOpen
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -82,6 +83,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       items: [
         { name: 'Equipe', href: '/admin/equipe', icon: Users },
         { name: 'Leads (Raio-X)', href: '/admin/leads', icon: Target },
+        { name: 'Playbook', href: '/admin/playbook', icon: BookOpen },
       ]
     },
     {

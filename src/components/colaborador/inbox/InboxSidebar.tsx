@@ -4,6 +4,9 @@ import type { LeadRow } from '@/types/database.types'
 import { formatDistanceToNow, addDays, setHours, setMinutes } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import toast from 'react-hot-toast'
+import { useQuery } from '@tanstack/react-query'
+import { scriptService } from '@/services/script.service'
+import { BookOpen, Copy, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
 
 interface InboxSidebarProps {
   lead: Partial<LeadRow> | null;
@@ -22,14 +25,44 @@ interface InboxSidebarProps {
 export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, onSaveNote, affiliateLink, salesLink, viewerRole = 'collaborator', canSeeEmail = true, onRemoveFromQueue, onDeleteLead }: InboxSidebarProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [noteText, setNoteText] = useState('')
+  const [showScripts, setShowScripts] = useState(true)
+
+  const { data: recommendedScripts = [] } = useQuery({
+    queryKey: ['recommended_scripts', lead?.id, lead?.gateway_status],
+    queryFn: () => scriptService.getRecommendedScripts(lead?.gateway_status || '', lead?.refund_reason),
+    enabled: !!lead && !!lead.gateway_status
+  })
 
   useEffect(() => {
     if (lead) {
       setNoteText('') // Sempre iniciar vazio para empilhar novos comentários
+      setShowScripts(true)
     }
   }, [lead])
 
   if (!lead) return null
+
+  const parseScriptVariables = (content: string) => {
+    let parsed = content
+    parsed = parsed.replace(/{NOME}/g, lead.name?.split(' ')[0] || '')
+    parsed = parsed.replace(/{PRODUTO}/g, lead.product_name || '')
+    parsed = parsed.replace(/{LINK_CHECKOUT}/g, affiliateLink || '')
+    parsed = parsed.replace(/{LINK_VENDAS}/g, salesLink || '')
+    return parsed
+  }
+
+  const handleCopyScript = (content: string) => {
+    const text = parseScriptVariables(content)
+    navigator.clipboard.writeText(text)
+    toast.success('Script copiado com as variáveis preenchidas!')
+  }
+
+  const handleSendScript = (content: string) => {
+    if (!lead.phone) return toast.error('Sem telefone')
+    const text = parseScriptVariables(content)
+    const url = `https://wa.me/55${lead.phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`
+    window.open(url, '_blank')
+  }
 
   const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     setIsUpdating(true)
@@ -231,6 +264,56 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 pb-8 space-y-6">
         
+        {/* PLAYBOOK / SCRIPTS RECOMENDADOS */}
+        {recommendedScripts.length > 0 && (
+          <div className="bg-indigo-50 border border-indigo-100 rounded-xl overflow-hidden shadow-sm">
+            <button 
+              onClick={() => setShowScripts(!showScripts)}
+              className="w-full flex items-center justify-between p-3 bg-indigo-100/50 hover:bg-indigo-100 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-indigo-700" />
+                <span className="text-[13px] font-bold text-indigo-900 uppercase tracking-wider">Playbook (Scripts Sugeridos)</span>
+                <span className="bg-indigo-200 text-indigo-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{recommendedScripts.length}</span>
+              </div>
+              {showScripts ? <ChevronUp className="w-4 h-4 text-indigo-600" /> : <ChevronDown className="w-4 h-4 text-indigo-600" />}
+            </button>
+            
+            {showScripts && (
+              <div className="p-3 space-y-3">
+                {recommendedScripts.map((script: any) => (
+                  <div key={script.id} className="bg-white border border-indigo-100 rounded-lg overflow-hidden">
+                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 text-[12px] font-bold text-gray-700 flex justify-between items-center">
+                      {script.title}
+                      {script.sub_condition && (
+                        <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                          Motivo: {script.sub_condition}
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-3 text-[13px] text-gray-700 whitespace-pre-wrap leading-relaxed">
+                      {parseScriptVariables(script.content)}
+                    </div>
+                    <div className="px-3 py-2 bg-gray-50 border-t border-gray-100 flex gap-2">
+                      <button 
+                        onClick={() => handleCopyScript(script.content)}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-100 text-gray-700 text-xs font-bold rounded shadow-sm transition-colors"
+                      >
+                        <Copy className="w-3.5 h-3.5" /> Copiar Texto
+                      </button>
+                      <button 
+                        onClick={() => handleSendScript(script.content)}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-bold rounded shadow-sm transition-colors"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" /> Enviar p/ Zap
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {/* Alert Context */}
         {lead.refund_reason && (
           <div className="bg-[#fef2f2] rounded-lg p-4 border border-[#fecaca] flex items-start gap-3">
