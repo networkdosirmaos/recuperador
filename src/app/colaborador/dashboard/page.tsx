@@ -251,58 +251,26 @@ export default function ColaboradorDashboard() {
         </div>
       )}
 
-      {/* HEADER */}
-      <div className="mb-6">
-        <h1 className="text-[26px] font-bold text-[#1a1d23] mb-1 tracking-tight">Minha fila</h1>
-        <p className="text-[#6b7280] text-[15px]">O que você precisa atacar agora.</p>
+      {/* HEADER DINÂMICO */}
+      <div className="mb-6 flex justify-between items-end">
+        <div>
+          <h1 className="text-[26px] font-bold text-[#1a1d23] mb-1 tracking-tight">Seu campo de batalha{user?.user_metadata?.name ? `, ${user.user_metadata.name.split(' ')[0]}` : ''}</h1>
+          <p className="text-[#6b7280] text-[15px]">Aqui está o que exige sua atenção hoje.</p>
+        </div>
+        <div className="hidden md:flex items-center gap-1 text-[#6b7280] text-sm font-medium cursor-pointer hover:text-gray-900 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
+          Mais recentes <ChevronDown className="w-4 h-4" />
+        </div>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs INTERATIVOS (Botões de Abas) */}
       <InboxKPIs 
         pendentes={counts.pendentes} 
         emAndamento={counts.em_andamento} 
         fechados={counts.fechados}
         animate={isAnimating}
+        activeTab={selectedTab}
+        onTabChange={setSelectedTab}
       />
-
-      {/* TABS e Sort */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar">
-          <button
-            onClick={() => setSelectedTab('pendentes')}
-            className={`px-4 py-2 rounded-lg font-bold text-[14px] whitespace-nowrap transition-colors flex items-center gap-2 ${
-              selectedTab === 'pendentes' 
-                ? 'bg-[#ef4444] text-white shadow-sm' 
-                : 'bg-white border border-[#e5e7eb] text-[#4b5563] hover:bg-[#f9fafb]'
-            }`}
-          >
-            🔴 Pendentes <span className="opacity-80">({counts.pendentes})</span>
-          </button>
-          <button
-            onClick={() => setSelectedTab('em_andamento')}
-            className={`px-4 py-2 rounded-lg font-bold text-[14px] whitespace-nowrap transition-colors flex items-center gap-2 ${
-              selectedTab === 'em_andamento' 
-                ? 'bg-[#f59e0b] text-white shadow-sm' 
-                : 'bg-white border border-[#e5e7eb] text-[#4b5563] hover:bg-[#f9fafb]'
-            }`}
-          >
-            🟡 Em Andamento <span className="opacity-80">({counts.em_andamento})</span>
-          </button>
-          <button
-            onClick={() => setSelectedTab('fechados')}
-            className={`px-4 py-2 rounded-lg font-bold text-[14px] whitespace-nowrap transition-colors flex items-center gap-2 ${
-              selectedTab === 'fechados' 
-                ? 'bg-[#10b981] text-white shadow-sm' 
-                : 'bg-white border border-[#e5e7eb] text-[#4b5563] hover:bg-[#f9fafb]'
-            }`}
-          >
-            🏆 Fechados <span className="opacity-80">({counts.fechados})</span>
-          </button>
-        </div>
-        <div className="hidden md:flex items-center gap-1 text-[#6b7280] text-sm font-medium cursor-pointer hover:text-gray-900">
-          Mais recentes <ChevronDown className="w-4 h-4" />
-        </div>
-      </div>
 
       {/* Inbox List Grouped */}
       <div className="flex flex-col gap-8">
@@ -346,8 +314,28 @@ export default function ColaboradorDashboard() {
         )}
 
         {filteredLeads.length === 0 && (
-          <div className="text-center p-12 bg-white rounded-xl border border-dashed border-[#e5e7eb] text-[#6b7280]">
-            Nenhum lead nesta aba.
+          <div className="text-center p-12 bg-white rounded-xl border border-dashed border-[#e5e7eb] flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300">
+            {selectedTab === 'pendentes' && (
+              <>
+                <div className="text-5xl mb-4">🔥</div>
+                <h3 className="text-lg font-bold text-[#1a1d23] mb-1">Inbox Zero Alcançado!</h3>
+                <p className="text-[#6b7280]">Você limpou o seu campo de batalha. Respire um pouco ou puxe novos leads.</p>
+              </>
+            )}
+            {selectedTab === 'em_andamento' && (
+              <>
+                <div className="text-5xl mb-4">☕</div>
+                <h3 className="text-lg font-bold text-[#1a1d23] mb-1">Esteira Vazia</h3>
+                <p className="text-[#6b7280]">Nenhum cliente em atendimento. Seu foco total deve estar nos pendentes.</p>
+              </>
+            )}
+            {selectedTab === 'fechados' && (
+              <>
+                <div className="text-5xl mb-4">🏆</div>
+                <h3 className="text-lg font-bold text-[#1a1d23] mb-1">Sala de Troféus</h3>
+                <p className="text-[#6b7280]">Está vazia hoje. Bora fechar a primeira recuperação!</p>
+              </>
+            )}
           </div>
         )}
       </div>
