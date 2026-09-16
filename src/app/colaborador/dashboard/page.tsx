@@ -15,6 +15,7 @@ import { InboxSidebar } from '@/components/colaborador/inbox/InboxSidebar'
 import { useLeadGamification } from '@/hooks/useLeadGamification'
 import { useLeadBuckets } from '@/hooks/useLeadBuckets'
 import { GroupedVirtuoso } from 'react-virtuoso'
+import { updateLeadStatusSecure, appendLeadHistorySecure, updateNextActionSecure } from '@/app/actions/lead.actions'
 
 export default function ColaboradorDashboard() {
   const queryClient = useQueryClient()
@@ -62,7 +63,7 @@ export default function ColaboradorDashboard() {
   // Mutations
   const updateStatusMutation = useMutation({
     mutationFn: ({ leadId, newStatus }: { leadId: string, newStatus: string }) => 
-      sellerService.updateLeadStatus(leadId, newStatus),
+      updateLeadStatusSecure(leadId, newStatus, userId!),
     onMutate: async ({ leadId, newStatus }) => {
       await queryClient.cancelQueries({ queryKey: ['seller_leads', userId] })
       const previousLeads = queryClient.getQueryData(['seller_leads', userId])
@@ -91,7 +92,7 @@ export default function ColaboradorDashboard() {
 
   const updateScheduleMutation = useMutation({
     mutationFn: ({ leadId, nextActionAt }: { leadId: string, nextActionAt: string | null }) => 
-      sellerService.updateNextAction(leadId, nextActionAt),
+      updateNextActionSecure(leadId, nextActionAt, userId!),
     onMutate: async ({ leadId, nextActionAt }) => {
       await queryClient.cancelQueries({ queryKey: ['seller_leads', userId] })
       const previousLeads = queryClient.getQueryData(['seller_leads', userId])
@@ -109,14 +110,20 @@ export default function ColaboradorDashboard() {
   })
 
   const addNoteMutation = useMutation({
-    mutationFn: ({ leadId, newHistory }: { leadId: string, newHistory: any[] }) => 
-      sellerService.updateHistoryLog(leadId, newHistory),
-    onMutate: async ({ leadId, newHistory }) => {
+    mutationFn: ({ leadId, text }: { leadId: string, text: string }) => 
+      appendLeadHistorySecure(leadId, userId!, text),
+    onMutate: async ({ leadId, text }) => {
       await queryClient.cancelQueries({ queryKey: ['seller_leads', userId] })
       const previousLeads = queryClient.getQueryData(['seller_leads', userId])
       
+      const newEvent = {
+        type: 'HUMAN_NOTE',
+        description: text,
+        created_at: new Date().toISOString()
+      }
+      
       queryClient.setQueryData(['seller_leads', userId], (old: any) => 
-        old?.map((l: any) => l.id === leadId ? { ...l, history_log: newHistory } : l)
+        old?.map((l: any) => l.id === leadId ? { ...l, history_log: [...(Array.isArray(l.history_log) ? l.history_log : []), newEvent] } : l)
       )
       return { previousLeads }
     },
@@ -137,20 +144,7 @@ export default function ColaboradorDashboard() {
   }
 
   const handleSaveNote = async (leadId: string, text: string) => {
-    const leads: any[] = queryClient.getQueryData(['seller_leads', userId]) || []
-    const lead = leads.find(l => l.id === leadId)
-    if (!lead) return
-
-    const newEvent = {
-      type: 'HUMAN_NOTE',
-      description: text,
-      created_at: new Date().toISOString()
-    }
-    
-    const currentHistory = Array.isArray(lead.history_log) ? lead.history_log : []
-    const newHistory = [...currentHistory, newEvent]
-
-    await addNoteMutation.mutateAsync({ leadId, newHistory })
+    await addNoteMutation.mutateAsync({ leadId, text })
   }
 
   if (loading) {
