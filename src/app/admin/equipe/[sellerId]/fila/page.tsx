@@ -3,8 +3,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { InboxView } from '@/components/shared/inbox/InboxView'
+import { useParams } from 'next/navigation'
 
-export default function AdminSellerInbox({ params }: { params: { sellerId: string } }) {
+export default function AdminSellerInbox() {
+  const params = useParams()
+  const sellerId = params.sellerId as string
+
   // Buscar Sessão do admin
   const { data: sessionData, isLoading } = useQuery({
     queryKey: ['session'],
@@ -27,7 +31,7 @@ export default function AdminSellerInbox({ params }: { params: { sellerId: strin
 
   return (
     <InboxView 
-      targetUserId={params.sellerId} 
+      targetUserId={sellerId} 
       viewerRole="admin" 
       viewerId={adminId} 
     />
