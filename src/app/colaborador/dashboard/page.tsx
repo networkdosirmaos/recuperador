@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
-import { AlertCircle, ChevronDown } from 'lucide-react'
+import { AlertCircle, ChevronDown, RefreshCw } from 'lucide-react'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { sellerService } from '@/services/seller.service'
@@ -39,7 +39,7 @@ export default function ColaboradorDashboard() {
     enabled: !!userId
   })
 
-  const { data: myLeads = [], isLoading: loadingLeads } = useQuery({
+  const { data: myLeads = [], isLoading: loadingLeads, isFetching, refetch } = useQuery({
     queryKey: ['seller_leads', userId],
     queryFn: () => sellerService.getMyLeads(userId!),
     enabled: !!userId
@@ -226,8 +226,19 @@ export default function ColaboradorDashboard() {
             </button>
           )}
         </div>
-        <div className="hidden md:flex items-center gap-1 text-[#6b7280] text-sm font-medium cursor-pointer hover:text-gray-900 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
-          Mais recentes <ChevronDown className="w-4 h-4" />
+        <div className="flex items-center gap-2">
+          {/* Botão de Refresh (Mobile e Desktop) */}
+          <button
+            onClick={() => refetch()}
+            className="flex items-center justify-center p-2.5 md:p-2 text-[#6b7280] hover:text-indigo-600 bg-white rounded-lg border border-gray-200 shadow-sm transition-colors"
+            title="Atualizar fila"
+          >
+            <RefreshCw className={`w-5 h-5 md:w-4 md:h-4 ${isFetching ? 'animate-spin text-indigo-600' : ''}`} />
+          </button>
+
+          <div className="hidden md:flex items-center gap-1 text-[#6b7280] text-sm font-medium cursor-pointer hover:text-gray-900 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
+            Mais recentes <ChevronDown className="w-4 h-4" />
+          </div>
         </div>
       </div>
 
