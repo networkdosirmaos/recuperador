@@ -8,7 +8,7 @@ export const sellerService = {
   },
 
   async getProfile(userId: string) {
-    const { data, error } = await supabase.from('profiles').select('is_active').eq('id', userId).single()
+    const { data, error } = await supabase.from('profiles').select('is_active, affiliate_link').eq('id', userId).single()
     if (error) throw error
     return data
   },
