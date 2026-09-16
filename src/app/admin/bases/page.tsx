@@ -56,12 +56,15 @@ export default function BasesPage() {
       // Buscar colaboradores para o modal (em paralelo)
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, full_name')
+        .select('id, full_name, email')
         .eq('role', 'collaborator')
         .eq('is_active', true)
         
       if (profiles) {
-        setCollaborators(profiles.map(p => ({ id: p.id, name: p.full_name || 'Desconhecido' })))
+        setCollaborators(profiles.map(p => ({ 
+          id: p.id, 
+          name: p.full_name || p.email || 'Desconhecido' 
+        })))
       }
 
       // Buscar as listas
@@ -75,7 +78,7 @@ export default function BasesPage() {
           imported_at,
           default_assignee_id,
           leads(count),
-          profiles(full_name)
+          profiles(full_name, email)
         `)
         .order('imported_at', { ascending: false })
 
@@ -104,7 +107,7 @@ export default function BasesPage() {
         leadsCount: item.leads?.[0]?.count || 0,
         recoveredCount: 0,
         default_assignee_id: item.default_assignee_id,
-        owner_name: item.profiles?.full_name
+        owner_name: item.profiles?.full_name || item.profiles?.email
       }))
 
       setLists(formatted)
