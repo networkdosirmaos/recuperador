@@ -270,6 +270,18 @@ export default function ColaboradorDashboard() {
         <div>
           <h1 className="text-[26px] font-bold text-[#1a1d23] mb-1 tracking-tight">Central de Leads{sessionData?.user?.user_metadata?.name ? `, ${sessionData.user.user_metadata.name.split(' ')[0]}` : ''}</h1>
           <p className="text-[#6b7280] text-[15px]">Aqui está o que exige sua atenção hoje.</p>
+          {profile?.affiliate_link && (
+            <button 
+              onClick={() => {
+                navigator.clipboard.writeText(profile.affiliate_link)
+                toast.success('Link copiado!')
+              }}
+              className="mt-3 flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-semibold rounded-lg border border-indigo-100 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              Copiar Meu Link (Produto)
+            </button>
+          )}
         </div>
         <div className="hidden md:flex items-center gap-1 text-[#6b7280] text-sm font-medium cursor-pointer hover:text-gray-900 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
           Mais recentes <ChevronDown className="w-4 h-4" />
