@@ -160,6 +160,23 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
                 <span className="block text-[11px] text-[#9ca3af] mt-1.5 font-medium">
                   {log.created_at ? formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR }) : 'Desconhecido'}
                 </span>
+                
+                {/* Botão de Ver Payload - Apenas no primeiro evento (mais recente) que não seja nota humana e se tiver gateway_metadata */}
+                {!isHumanNote && idx === 0 && lead.gateway_metadata && (
+                  <div className="mt-3">
+                    <details className="group">
+                      <summary className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer list-none flex items-center gap-1 transition-colors">
+                        <span className="group-open:hidden">▶ Ver Payload da Cakto</span>
+                        <span className="hidden group-open:inline">▼ Esconder Payload</span>
+                      </summary>
+                      <div className="mt-2 bg-gray-900 rounded-lg p-3 overflow-x-auto">
+                        <pre className="text-[10px] text-green-400 font-mono leading-relaxed">
+                          {JSON.stringify(lead.gateway_metadata, null, 2)}
+                        </pre>
+                      </div>
+                    </details>
+                  </div>
+                )}
               </div>
             </div>
           )

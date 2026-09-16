@@ -26,7 +26,7 @@ export const sellerService = {
   async getMyLeads(userId: string) {
     const { data, error } = await supabase
       .from('leads')
-      .select('id, name, phone, email, product_name, status, temperature, updated_at, gateway, gateway_updated_at, payment_method, gateway_status, reason, gateway_event, created_at, next_action_at, notes, history_log')
+      .select('id, name, phone, email, product_name, status, temperature, updated_at, gateway, gateway_updated_at, payment_method, gateway_status, reason, gateway_event, created_at, next_action_at, notes, history_log, gateway_metadata')
       .eq('current_assignee_id', userId)
       .order('updated_at', { ascending: false })
       .limit(300)
