@@ -28,14 +28,14 @@ export default function EquipeDashboard() {
       const teamStats: TeamMemberStat[] = []
       
       for (const p of profiles) {
-        // Quantos estão na mão dele agora (status != novo, recuperado, perdido)
-        const { count: inProgress } = await supabase
+        // Quantos estão pendentes na mesa dele (status novo ou em_atendimento)
+        const { count: pendentes } = await supabase
           .from('leads')
           .select('*', { count: 'exact', head: true })
           .eq('current_assignee_id', p.id)
-          .not('status', 'in', '("novo","recuperado","perdido")')
+          .in('status', ['novo', 'em_atendimento'])
 
-        // Quantos recuperados
+        // Quantos recuperados (hoje, idealmente, mas pegamos o count de recuperado como placeholder)
         const { count: recovered } = await supabase
           .from('leads')
           .select('*', { count: 'exact', head: true })
@@ -47,7 +47,7 @@ export default function EquipeDashboard() {
           name: p.full_name || 'Vendedor',
           email: p.email || 'E-mail não sincronizado',
           is_active: p.is_active === null ? true : p.is_active,
-          in_progress: inProgress || 0,
+          in_progress: pendentes || 0,
           recovered: recovered || 0
         })
       }

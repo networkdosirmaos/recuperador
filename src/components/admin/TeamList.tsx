@@ -33,8 +33,8 @@ export function TeamList({ members, onToggleStatus, onReturnLeads }: TeamListPro
               <tr>
                 <th className="px-6 py-4">Colaborador</th>
                 <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Em Atendimento</th>
-                <th className="px-6 py-4">Recuperados</th>
+                <th className="px-6 py-4">📦 Pendentes na Mesa</th>
+                <th className="px-6 py-4">🏆 Recuperados</th>
                 <th className="px-6 py-4 text-right">Ações</th>
               </tr>
             </thead>
@@ -47,12 +47,12 @@ export function TeamList({ members, onToggleStatus, onReturnLeads }: TeamListPro
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                      member.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      member.is_active ? 'bg-green-100 text-green-800 border border-green-200 shadow-sm' : 'bg-red-100 text-red-800 border border-red-200 shadow-sm'
                     }`}>
-                      {member.is_active ? 'Ativo' : 'Pausado'}
+                      {member.is_active ? '✅ Recebendo Leads' : '⏸️ Pausado'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 font-medium text-gray-700">
+                  <td className="px-6 py-4 font-bold text-gray-700">
                     {member.in_progress} leads
                   </td>
                   <td className="px-6 py-4 font-bold text-green-600">

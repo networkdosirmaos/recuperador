@@ -133,13 +133,24 @@ function BaseDeLeadsContent() {
     })
   }
 
-  const executeSearch = (e?: React.FormEvent) => {
+  const executeSearch = (e?: React.FormEvent, override?: { term: string, status: string }) => {
     if (e) e.preventDefault()
-    setActiveFilters({
-      listId: selectedList,
-      status: selectedStatus,
-      searchTerm: searchTerm
-    })
+    
+    if (override) {
+      setSearchTerm(override.term)
+      setSelectedStatus(override.status)
+      setActiveFilters({
+        listId: selectedList,
+        status: override.status,
+        searchTerm: override.term
+      })
+    } else {
+      setActiveFilters({
+        listId: selectedList,
+        status: selectedStatus,
+        searchTerm: searchTerm
+      })
+    }
   }
 
   const getPaymentIcon = (method?: string) => {
@@ -223,17 +234,44 @@ function BaseDeLeadsContent() {
               <option value="all">Qualquer Status</option>
               <option value="novo">Novo na Fila</option>
               <option value="em_atendimento">Em Atendimento</option>
-              <option value="recuperado">Recuperado</option>
+              <option value="recuperado">Recuperado (Afiliado)</option>
+              <option value="venda_organica">Venda Orgânica</option>
               <option value="perdido">Perdido</option>
             </select>
           </div>
         </div>
 
-        <div className="flex justify-end pt-2 border-t border-gray-100">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-gray-100 mt-4">
+          
+          {/* QUICK FILTERS */}
+          <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 hide-scrollbar">
+            <button
+              type="button"
+              onClick={() => executeSearch(undefined, { term: 'pix', status: 'novo' })}
+              className="whitespace-nowrap px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 rounded-full text-xs font-bold transition-colors"
+            >
+              🧊 Em Geladeira
+            </button>
+            <button
+              type="button"
+              onClick={() => executeSearch(undefined, { term: '', status: 'venda_organica' })}
+              className="whitespace-nowrap px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-full text-xs font-bold transition-colors"
+            >
+              💰 Vendas Orgânicas
+            </button>
+            <button
+              type="button"
+              onClick={() => executeSearch(undefined, { term: 'abandoned', status: 'novo' })}
+              className="whitespace-nowrap px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 rounded-full text-xs font-bold transition-colors"
+            >
+              🛑 Abandonos
+            </button>
+          </div>
+
           <button 
             type="submit" 
             disabled={searching}
-            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+            className="flex items-center gap-2 px-6 py-2 bg-[#7c3aed] text-white font-medium rounded-lg hover:bg-[#6d28d9] transition-colors shadow-sm"
           >
             {searching ? <Loader2 className="w-5 h-5 animate-spin" /> : <Filter className="w-5 h-5" />}
             Aplicar Filtros
