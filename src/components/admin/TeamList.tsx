@@ -1,4 +1,5 @@
-import { PauseCircle, PlayCircle, RefreshCw, Link2 } from 'lucide-react'
+import { PauseCircle, PlayCircle, RefreshCw, Link2, Eye } from 'lucide-react'
+import Link from 'next/link'
 
 export type TeamMemberStat = {
   id: string
@@ -71,6 +72,14 @@ export function TeamList({ members, onToggleStatus, onReturnLeads, onEditLink }:
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
+                      <Link
+                        href={`/admin/equipe/${member.id}/fila`}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition-colors shadow-sm"
+                        title="Ver fila deste vendedor (Modo Espião)"
+                      >
+                        <Eye className="w-4 h-4" />
+                        Ver Fila
+                      </Link>
                       {onEditLink && (
                         <button
                           onClick={() => onEditLink(member)}
