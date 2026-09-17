@@ -1,195 +1,71 @@
-import { supabaseAdmin } from '@/lib/supabase-admin'
-import type { Json } from '@/types/database.types'
-
-export interface NormalizedWebhookPayload {
-  listId: string
-  event: string
-  gateway: string
-  nome: string | null
-  email: string | null
-  phone: string | null
-  produto: string
-  customerId: string | null
-  gatewayStatus: string
-  updatedAt: string
-  paymentMethod: string | null
-  refusalReason: string | null
-  refundedAt: string | null
-  chargedbackAt: string | null
-  refundReason: string | null
-  affiliateEmail?: string | null
-  isPing: boolean
-  rawPayload: Json
-}
+import { NormalizedWebhookPayload } from './coreLead.types'
+import { LeadRouter } from './webhook/LeadRouter'
+import { LeadRepository } from './webhook/LeadRepository'
 
 export const coreLeadService = {
   async processWebhookEvent(payload: NormalizedWebhookPayload) {
-    let assignedSellerId = null
-
-    // 1. CHECAR DONO DA LISTA (Fura-fila da Roleta)
-    if (payload.listId) {
-      const { data: listData } = await supabaseAdmin
-        .from('lead_lists')
-        .select('default_assignee_id')
-        .eq('id', payload.listId)
-        .single()
-
-      if (listData?.default_assignee_id) {
-        // Se a lista tem dono, verificar se ele está ativo
-        const { data: ownerProfile } = await supabaseAdmin
-          .from('profiles')
-          .select('id, is_active')
-          .eq('id', listData.default_assignee_id)
-          .single()
-
-        if (ownerProfile && ownerProfile.is_active) {
-          assignedSellerId = ownerProfile.id
-        }
-      }
-    }
-
-    // 2. ROLETA AUTOMÁTICA (Se não tem dono ou o dono está inativo)
-    if (!assignedSellerId) {
-      const { data: availableSellers } = await supabaseAdmin
-        .from('profiles')
-        .select('id')
-        .eq('role', 'collaborator')
-        .eq('is_active', true)
-        .order('last_assigned_at', { ascending: true, nullsFirst: true })
-        .limit(1)
-
-      if (availableSellers && availableSellers.length > 0) {
-        assignedSellerId = availableSellers[0].id
-        
-        await supabaseAdmin
-          .from('profiles')
-          .update({ last_assigned_at: new Date().toISOString() })
-          .eq('id', assignedSellerId)
-      }
-    }
-
-    // 3. DEDUPLICAÇÃO (Buscar se o Lead já existe)
-    let existingLead = null
-    if (payload.customerId || payload.email || payload.phone) {
-      const orConditions = []
-      if (payload.customerId) orConditions.push(`customer_id.eq.${payload.customerId}`)
-      if (payload.email) orConditions.push(`email.eq.${payload.email}`)
-      if (payload.phone) orConditions.push(`phone.eq.${payload.phone}`)
-
-      if (orConditions.length > 0) {
-        const { data: foundLeads } = await supabaseAdmin
-          .from('leads')
-          .select('id, current_assignee_id')
-          .or(orConditions.join(','))
-          .limit(1)
-        
-        if (foundLeads && foundLeads.length > 0) {
-          existingLead = foundLeads[0]
-        }
-      }
-    }
-
-    let finalLeadId = null
-    const temperature = (payload.gatewayStatus === 'waiting_payment' || payload.gatewayStatus === 'pending' || payload.event.includes('abandonment')) ? 'quente' : 'frio'
+    // 1. Busca se ja existe
+    const existingLead = await LeadRepository.findExistingLead(payload.customerId, payload.email, payload.phone)
     
-    // FASE 1: Inteligência Básica
     const isApproved = payload.event === 'purchase_approved' || payload.gatewayStatus === 'approved'
     const isRefundOrChargeback = payload.event.includes('refund') || payload.event.includes('chargeback') || payload.gatewayStatus === 'refunded' || payload.gatewayStatus === 'chargeback'
+    const temperature = (payload.gatewayStatus === 'waiting_payment' || payload.gatewayStatus === 'pending' || payload.event.includes('abandonment')) ? 'quente' : 'frio'
 
-    // FASE 2: O Motor de Comissionamento (Afiliado vs Orgânica)
-    let finalStatus: string | undefined = undefined
-    let finalAssigneeId = existingLead ? existingLead.current_assignee_id : assignedSellerId
+    // 2. Decide quem vai ficar com o lead (Roteamento)
+    const { assigneeId, statusOverride } = await LeadRouter.determineAssignee(
+      payload.listId, 
+      isApproved ? (payload.affiliateEmail || null) : null, 
+      existingLead ? existingLead.current_assignee_id : null
+    )
 
-    if (isApproved) {
-      if (payload.affiliateEmail) {
-        // Busca se existe algum colaborador com esse email
-        const { data: affiliateProfile } = await supabaseAdmin
-          .from('profiles')
-          .select('id')
-          .eq('email', payload.affiliateEmail)
-          .single()
-
-        if (affiliateProfile) {
-          finalStatus = 'recuperado'
-          finalAssigneeId = affiliateProfile.id // A Regra do Roubo Justo: Quem converteu fica com o lead!
-        } else {
-          finalStatus = 'venda_organica' // Afiliado de fora da equipe
-        }
-      } else {
-        finalStatus = 'venda_organica' // Sem afiliado = Tráfego direto
-      }
-    } else if (isRefundOrChargeback) {
-      finalStatus = 'novo' // Volta pra fila urgente
+    let finalStatus = statusOverride
+    if (!finalStatus) {
+      if (isApproved && !payload.affiliateEmail) finalStatus = 'venda_organica'
+      else if (isApproved && payload.affiliateEmail) finalStatus = 'venda_organica'
+      else if (isRefundOrChargeback) finalStatus = 'novo'
     }
 
-    if (existingLead) {
-      // 3A. ATUALIZAR (Upsert)
-      const { data: updated, error: updateError } = await supabaseAdmin
-        .from('leads')
-        .update({
-          gateway_updated_at: payload.updatedAt,
-          gateway_status: payload.gatewayStatus,
-          gateway_event: payload.event,
-          gateway_metadata: payload.rawPayload,
-          reason: payload.isPing ? 'Webhook recebido (Update)' : payload.refusalReason,
-          temperature: isRefundOrChargeback ? 'quente' : temperature,
-          name: payload.nome || undefined,
-          product_name: payload.produto !== 'Produto Não Informado' ? payload.produto : undefined,
-          ...(finalStatus ? { status: finalStatus } : {}),
-          current_assignee_id: finalAssigneeId
-        })
-        .eq('id', existingLead.id)
-        .select('id')
-        .single()
-      
-      if (updateError) throw updateError
-      finalLeadId = updated.id
+    // 3. Prepara os dados pro Upsert
+    const leadData: any = {
+      gateway_updated_at: payload.updatedAt,
+      gateway_status: payload.gatewayStatus,
+      gateway_event: payload.event,
+      gateway_metadata: payload.rawPayload,
+      reason: payload.isPing ? 'Webhook recebido (Update)' : payload.refusalReason,
+      temperature: isRefundOrChargeback ? 'quente' : temperature,
+      name: payload.nome ? payload.nome : (existingLead ? undefined : 'Sem Nome'),
+      current_assignee_id: assigneeId,
+      ...(finalStatus ? { status: finalStatus } : {})
+    }
+
+    if (!existingLead) {
+      leadData.phone = payload.phone
+      leadData.email = payload.email
+      leadData.customer_id = payload.customerId
+      leadData.product_name = payload.produto !== 'Produto Não Informado' ? payload.produto : undefined
+      leadData.gateway = payload.gateway
+      leadData.refunded_at = payload.refundedAt
+      leadData.chargedback_at = payload.chargedbackAt
+      leadData.refund_reason = payload.refundReason
+      leadData.payment_method = payload.paymentMethod
+      leadData.list_id = payload.listId
+      if (!leadData.status) leadData.status = 'novo'
+      if (payload.isPing) leadData.name = '🛠️ TESTE (Webhook)'
     } else {
-      // 3B. INSERIR NOVO
-      const leadData = {
-        name: payload.isPing ? '🛠️ TESTE (Webhook)' : (payload.nome || 'Sem Nome'),
-        phone: payload.phone,
-        email: payload.email,
-        customer_id: payload.customerId,
-        product_name: payload.produto,
-        gateway: payload.gateway,
-        gateway_updated_at: payload.updatedAt,
-        refunded_at: payload.refundedAt,
-        chargedback_at: payload.chargedbackAt,
-        refund_reason: payload.refundReason,
-        payment_method: payload.paymentMethod,
-        reason: payload.isPing ? 'Webhook de Teste/Ping recebido com sucesso' : payload.refusalReason,
-        gateway_status: payload.gatewayStatus,
-        gateway_event: payload.event,
-        gateway_metadata: payload.rawPayload,
-        list_id: payload.listId,
-        status: finalStatus || 'novo',
-        temperature: isRefundOrChargeback ? 'quente' : temperature,
-        current_assignee_id: finalAssigneeId 
-      }
-
-      const { data: inserted, error: insertError } = await supabaseAdmin
-        .from('leads')
-        .insert(leadData)
-        .select('id')
-        .single()
-
-      if (insertError) throw insertError
-      finalLeadId = inserted.id
+      if (payload.produto && payload.produto !== 'Produto Não Informado') leadData.product_name = payload.produto
     }
 
-    // 4. REGISTRAR O HISTÓRICO (Tabela Relacional - Evitando Race Conditions)
-    try {
-      await supabaseAdmin.from('lead_events').insert({
-        lead_id: finalLeadId,
-        gateway_event: payload.event,
-        gateway_status: payload.gatewayStatus,
-        reason: payload.isPing ? 'Webhook de Teste' : payload.refusalReason,
-        metadata: payload.rawPayload
-      })
-    } catch(e) {
-      console.error('Erro ao salvar evento relacional:', e)
-    }
+    // 4. Salva no banco
+    const finalLeadId = await LeadRepository.upsertLead(existingLead ? existingLead.id : null, leadData)
+
+    // 5. Salva Log na Timeline Relacional
+    await LeadRepository.logEvent(
+      finalLeadId, 
+      payload.event, 
+      payload.gatewayStatus, 
+      payload.isPing ? 'Webhook de Teste' : payload.refusalReason, 
+      payload.rawPayload
+    )
 
     return { leadId: finalLeadId }
   }
