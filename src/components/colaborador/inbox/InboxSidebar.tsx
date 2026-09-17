@@ -147,9 +147,21 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
       return <div className="text-center py-4 text-gray-500">Carregando histórico...</div>
     }
 
+    const oldEvents = Array.isArray(lead.history_log) ? lead.history_log.map((log: any) => ({
+      gateway_event: log.type,
+      gateway_status: log.type,
+      reason: log.description,
+      created_at: log.created_at,
+      metadata: null
+    })) : []
+    
+    const combinedEvents = [...dbEvents, ...oldEvents].sort((a, b) => {
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+    })
+
     return (
       <div className="relative border-l-2 border-[#e5e7eb] ml-3 mt-4 space-y-6">
-        {dbEvents.map((log: any, idx: number) => {
+        {combinedEvents.map((log: any, idx: number) => {
           const type = log.gateway_event || log.gateway_status || ''
           
           let Icon = Activity
@@ -238,7 +250,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
             </div>
           )
         })}
-        {dbEvents.length === 0 && (
+        {combinedEvents.length === 0 && (
           <div className="relative pl-6">
             <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[#f5f3ff] border-[3px] border-[#7c3aed]"></span>
             <p className="text-[13px] text-[#374151]">Lead entrou na fila</p>

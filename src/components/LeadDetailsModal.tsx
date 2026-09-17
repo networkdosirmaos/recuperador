@@ -24,6 +24,19 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
 
   if (!isOpen || !lead) return null
 
+  // Combina logs antigos do JSONB com os novos da tabela lead_events
+  const oldEvents = Array.isArray(lead.history_log) ? lead.history_log.map((log: any) => ({
+    gateway_event: log.type,
+    gateway_status: log.type,
+    reason: log.description,
+    created_at: log.created_at,
+    metadata: null
+  })) : []
+  
+  const combinedEvents = [...dbEvents, ...oldEvents].sort((a, b) => {
+    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+  })
+
   // Mapeamento de Cores para o Status do Gateway
   const getStatusColor = (status: string) => {
     const s = (status || '').toLowerCase()
@@ -213,7 +226,7 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
                 <div className="flex justify-center p-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                 </div>
-              ) : dbEvents.length === 0 ? (
+              ) : combinedEvents.length === 0 ? (
                 <div className="text-center p-8 text-gray-500 bg-gray-50 rounded-xl border border-gray-100">
                   <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                     <Calendar className="w-5 h-5 text-gray-400" />
@@ -222,7 +235,7 @@ export function LeadDetailsModal({ isOpen, onClose, lead, viewType = 'colaborado
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {dbEvents.map((ev: any, index: number) => {
+                  {combinedEvents.map((ev: any, index: number) => {
                     const isHumanNote = ev.gateway_event === 'HUMAN_NOTE';
                     const isExpanded = expandedEvent === index.toString();
                   
