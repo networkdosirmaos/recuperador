@@ -105,7 +105,7 @@ export async function updateAffiliateLinkSecure(id: string, link: string | null,
   const { error } = await supabaseAdmin.from('profiles').update(updateData).eq('id', id)
   if (error) throw error
   return true
-}
+}
 
 export async function assignMultipleLeadsSecure(leadIds: string[], collaboratorId: string | null) {
   await requireAdmin()
@@ -115,7 +115,7 @@ export async function assignMultipleLeadsSecure(leadIds: string[], collaboratorI
   }).in('id', leadIds)
   if (error) throw error
   return true
-}
+}
 
 export async function deleteListCascadeSecure(listId: string) {
   await requireAdmin()
@@ -127,7 +127,7 @@ export async function deleteListCascadeSecure(listId: string) {
   if (listErr) throw listErr
   
   return true
-}
+}
 
 export async function migrateHistoryLogSecure() {
   await requireAdmin()
@@ -150,4 +150,4 @@ export async function migrateHistoryLogSecure() {
     }
   }
   return migratedCount
-}
+}

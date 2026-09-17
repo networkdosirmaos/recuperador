@@ -4,9 +4,8 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 export async function requireAuthenticatedUser() {
   const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
-  
   if (error || !user) {
-    throw new Error('Não autenticado')
+    throw new Error('NÃ£o autenticado')
   }
   
   return user
@@ -22,7 +21,7 @@ export async function requireAdmin() {
     .single()
     
   if (!profile || profile.role !== 'admin') {
-    throw new Error('Acesso Negado: Apenas administradores podem executar esta ação.')
+    throw new Error('Acesso Negado: Apenas administradores podem executar esta aÃ§Ã£o.')
   }
   
   return user
