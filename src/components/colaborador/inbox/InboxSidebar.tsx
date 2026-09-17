@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { useQuery } from '@tanstack/react-query'
 import { scriptService } from '@/services/script.service'
 import { BookOpen, Copy, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
+import { createClient } from '@/utils/supabase/client'
 
 interface InboxSidebarProps {
   lead: Partial<LeadRow> | null;
@@ -31,6 +32,22 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
     queryKey: ['recommended_scripts', lead?.id, lead?.gateway_status],
     queryFn: () => scriptService.getRecommendedScripts(lead?.gateway_status || '', lead?.refund_reason),
     enabled: !!lead && !!lead.gateway_status
+  })
+
+  const { data: dbEvents = [], isLoading: isLoadingEvents } = useQuery({
+    queryKey: ['lead_events', lead?.id],
+    queryFn: async () => {
+      if (!lead?.id) return []
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('lead_events')
+        .select('*')
+        .eq('lead_id', lead.id)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!lead?.id
   })
 
   useEffect(() => {
@@ -126,51 +143,53 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
   }
 
   const renderHistory = () => {
-    const logs = Array.isArray(lead.history_log) ? lead.history_log : []
-    // Reverter para mostrar os mais recentes no topo
-    const reversedLogs = [...logs].reverse()
+    if (isLoadingEvents) {
+      return <div className="text-center py-4 text-gray-500">Carregando histórico...</div>
+    }
 
     return (
       <div className="relative border-l-2 border-[#e5e7eb] ml-3 mt-4 space-y-6">
-        {reversedLogs.map((log: any, idx) => {
+        {dbEvents.map((log: any, idx: number) => {
+          const type = log.gateway_event || log.gateway_status || ''
+          
           let Icon = Activity
           let bgClass = 'bg-[#f3f4f6]'
           let textClass = 'text-[#6b7280]'
           let borderClass = 'border-[#e5e7eb]'
           let isHumanNote = false
 
-          if (log.type === 'HUMAN_NOTE') {
+          if (type === 'HUMAN_NOTE') {
             Icon = MessageCircle
             bgClass = 'bg-[#f3e8ff]'
             textClass = 'text-[#7e22ce]'
             borderClass = 'border-[#9333ea]'
             isHumanNote = true
-          } else if (log.type === 'pix_generated' || log.type === 'pix_gerado' || log.type === 'waiting_payment') {
+          } else if (type === 'pix_generated' || type === 'pix_gerado' || type === 'waiting_payment') {
             Icon = QrCode
             bgClass = 'bg-[#f5f3ff]'
             textClass = 'text-[#7c3aed]'
             borderClass = 'border-[#7c3aed]'
-          } else if (log.type === 'purchase_refused') {
+          } else if (type === 'purchase_refused') {
             Icon = CreditCard
             bgClass = 'bg-[#fef2f2]'
             textClass = 'text-[#ef4444]'
             borderClass = 'border-[#ef4444]'
-          } else if (log.type === 'checkout_abandoned') {
+          } else if (type === 'checkout_abandoned') {
             Icon = ShoppingCart
             bgClass = 'bg-[#fff7ed]'
             textClass = 'text-[#ea580c]'
             borderClass = 'border-[#ea580c]'
-          } else if (log.type === 'purchase_approved') {
+          } else if (type === 'purchase_approved') {
             Icon = CheckCircle2
             bgClass = 'bg-[#ecfdf5]'
             textClass = 'text-[#10b981]'
             borderClass = 'border-[#10b981]'
-          } else if (log.type?.includes('refund')) {
+          } else if (type?.includes('refund')) {
             Icon = AlertCircle
             bgClass = 'bg-[#fef2f2]'
             textClass = 'text-[#dc2626]'
             borderClass = 'border-[#dc2626]'
-          } else if (log.type?.includes('chargeback')) {
+          } else if (type?.includes('chargeback')) {
             Icon = AlertCircle
             bgClass = 'bg-[#fee2e2]'
             textClass = 'text-[#b91c1c]'
@@ -184,23 +203,23 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
               </span>
               <div className="pt-1">
                 <p className={`text-[13px] font-bold ${textClass}`}>
-                  {isHumanNote ? 'Sua Anotação' : (log.type === 'pix_generated' || log.type === 'pix_gerado' || log.type === 'waiting_payment') ? 'PIX Gerado' :
-                   log.type === 'purchase_refused' ? 'Cartão Recusado' :
-                   log.type === 'checkout_abandoned' ? 'Carrinho Abandonado' :
-                   log.type === 'purchase_approved' ? 'Compra Aprovada' :
-                   log.type?.includes('refund') ? 'Reembolso Solicitado' :
-                   log.type?.includes('chargeback') ? 'Chargeback' :
-                   'Evento Registrado'}
+                  {isHumanNote ? 'Sua Anotação' : (type === 'pix_generated' || type === 'pix_gerado' || type === 'waiting_payment') ? 'PIX Gerado' :
+                   type === 'purchase_refused' ? 'Cartão Recusado' :
+                   type === 'checkout_abandoned' ? 'Carrinho Abandonado' :
+                   type === 'purchase_approved' ? 'Compra Aprovada' :
+                   type?.includes('refund') ? 'Reembolso Solicitado' :
+                   type?.includes('chargeback') ? 'Chargeback' :
+                   type}
                 </p>
                 <div className={`mt-1 text-[13px] leading-relaxed ${isHumanNote ? 'text-gray-800 bg-[#f3e8ff] p-3 rounded-lg rounded-tl-none border border-[#e9d5ff] inline-block shadow-sm' : 'text-[#4b5563]'}`}>
-                  {log.description || 'Sem detalhes'}
+                  {log.reason || log.gateway_status || 'Sem detalhes'}
                 </div>
                 <span className="block text-[11px] text-[#9ca3af] mt-1.5 font-medium">
                   {log.created_at ? formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR }) : 'Desconhecido'}
                 </span>
                 
                 {/* Botão de Ver Payload - Apenas no primeiro evento (mais recente) que não seja nota humana e se tiver gateway_metadata, e APENAS PARA ADMIN */}
-                {!isHumanNote && idx === 0 && lead.gateway_metadata && viewerRole === 'admin' && (
+                {!isHumanNote && idx === 0 && log.metadata && viewerRole === 'admin' && (
                   <div className="mt-3">
                     <details className="group">
                       <summary className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer list-none flex items-center gap-1 transition-colors">
@@ -209,7 +228,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
                       </summary>
                       <div className="mt-2 bg-gray-900 rounded-lg p-3 overflow-x-auto">
                         <pre className="text-[10px] text-green-400 font-mono leading-relaxed">
-                          {JSON.stringify(lead.gateway_metadata, null, 2)}
+                          {JSON.stringify(log.metadata, null, 2)}
                         </pre>
                       </div>
                     </details>
@@ -219,7 +238,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
             </div>
           )
         })}
-        {reversedLogs.length === 0 && (
+        {dbEvents.length === 0 && (
           <div className="relative pl-6">
             <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-[#f5f3ff] border-[3px] border-[#7c3aed]"></span>
             <p className="text-[13px] text-[#374151]">Lead entrou na fila</p>

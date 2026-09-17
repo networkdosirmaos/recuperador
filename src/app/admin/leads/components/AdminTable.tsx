@@ -70,16 +70,16 @@ export function AdminTable({
                     onChange={onToggleSelectAll}
                   />
                 </th>
-                <th className="p-4">Cliente</th>
-                <th className="p-4">Produto</th>
-                {showColumns.origin && <th className="p-4">Origem</th>}
-                {showColumns.payment && <th className="p-4">Pagamento</th>}
-                {showColumns.gateway_status && <th className="p-4">Status Gateway</th>}
-                {showColumns.gateway_event && <th className="p-4">Evento</th>}
-                {showColumns.reason && <th className="p-4">Motivo</th>}
-                {showColumns.gateway_updated_at && <th className="p-4">Data Gateway</th>}
-                {showColumns.crm_status && <th className="p-4">Status CRM</th>}
-                {showColumns.seller && <th className="p-4">Vendedor Atual</th>}
+                <th className="p-4 whitespace-nowrap">Cliente</th>
+                <th className="p-4 whitespace-nowrap">Produto</th>
+                {showColumns.origin && <th className="p-4 whitespace-nowrap">Origem</th>}
+                {showColumns.payment && <th className="p-4 whitespace-nowrap">Pagamento</th>}
+                {showColumns.gateway_status && <th className="p-4 whitespace-nowrap">Status Gateway</th>}
+                {showColumns.gateway_event && <th className="p-4 whitespace-nowrap">Evento</th>}
+                {showColumns.reason && <th className="p-4 whitespace-nowrap">Motivo</th>}
+                {showColumns.gateway_updated_at && <th className="p-4 whitespace-nowrap">Data Gateway</th>}
+                {showColumns.crm_status && <th className="p-4 whitespace-nowrap">Status CRM</th>}
+                {showColumns.seller && <th className="p-4 whitespace-nowrap">Vendedor Atual</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -104,16 +104,16 @@ export function AdminTable({
                     </button>
                   </td>
                   <td className="p-4">
-                    <div className="text-sm font-medium text-gray-900">{lead.product_name || 'N/A'}</div>
+                    <div className="text-sm font-medium text-gray-900 max-w-[200px] truncate" title={lead.product_name || 'N/A'}>{lead.product_name || 'N/A'}</div>
                   </td>
                   {showColumns.origin && (
-                    <td className="p-4 text-xs text-gray-600">
+                    <td className="p-4 text-xs text-gray-600 whitespace-nowrap">
                       {lead.lead_lists?.type === 'webhook_cakto' ? '⚡ ' : '📁 '} 
                       {lead.lead_lists?.name || 'Sem lista'}
                     </td>
                   )}
                   {showColumns.payment && (
-                    <td className="p-4">
+                    <td className="p-4 whitespace-nowrap">
                       {lead.payment_method && (
                         <div className="flex items-center gap-1 text-xs text-gray-600 font-semibold uppercase">
                           {getPaymentIcon(lead.payment_method)} {lead.payment_method === 'credit_card' ? 'Cartão' : lead.payment_method}
@@ -122,27 +122,27 @@ export function AdminTable({
                     </td>
                   )}
                   {showColumns.gateway_status && (
-                    <td className="p-4 text-xs font-mono text-gray-600">
+                    <td className="p-4 text-xs font-mono text-gray-600 whitespace-nowrap">
                       {lead.gateway_status || '-'}
                     </td>
                   )}
                   {showColumns.gateway_event && (
-                    <td className="p-4 text-xs text-gray-600">
+                    <td className="p-4 text-xs text-gray-600 whitespace-nowrap">
                       {lead.gateway_event || '-'}
                     </td>
                   )}
                   {showColumns.reason && (
-                    <td className="p-4 text-xs text-red-600">
+                    <td className="p-4 text-xs text-red-600 whitespace-nowrap">
                       {lead.reason ? <span title={lead.reason}>{lead.reason.substring(0, 30)}...</span> : '-'}
                     </td>
                   )}
                   {showColumns.gateway_updated_at && (
-                    <td className="p-4 text-xs text-gray-500">
+                    <td className="p-4 text-xs text-gray-500 whitespace-nowrap">
                       {lead.gateway_updated_at ? new Date(lead.gateway_updated_at).toLocaleString('pt-BR') : '-'}
                     </td>
                   )}
                   {showColumns.crm_status && (
-                    <td className="p-4">
+                    <td className="p-4 whitespace-nowrap">
                       <div className="flex flex-col gap-1 items-start">
                         {getStatusBadge(lead.status)}
                         {(lead.gateway_event === 'pix_generated' || lead.gateway_event === 'pix_gerado' || lead.gateway_event === 'waiting_payment') && lead.status === 'novo' && (nowTick - new Date(lead.updated_at || lead.created_at).getTime() < 6 * 60 * 1000) && (
@@ -154,7 +154,7 @@ export function AdminTable({
                     </td>
                   )}
                   {showColumns.seller && (
-                    <td className="p-4">
+                    <td className="p-4 whitespace-nowrap">
                       {lead.current_assignee_id ? (
                         <div className="flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
