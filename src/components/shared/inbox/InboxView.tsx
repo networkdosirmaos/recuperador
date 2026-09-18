@@ -10,14 +10,15 @@ import { adminService } from '@/services/admin.service'
 import { useLeadsRealtime } from '@/hooks/useLeadsRealtime'
 import toast from 'react-hot-toast'
 
+import { useLeadMutations } from '@/hooks/useLeadMutations'
 import { InboxKPIs } from '@/components/colaborador/inbox/InboxKPIs'
 import { InboxLeadCard } from '@/components/colaborador/inbox/InboxLeadCard'
 import { InboxSidebar } from '@/components/colaborador/inbox/InboxSidebar'
 import { useLeadGamification } from '@/hooks/useLeadGamification'
 import { useLeadBuckets } from '@/hooks/useLeadBuckets'
 import { GroupedVirtuoso } from 'react-virtuoso'
-import { updateLeadStatusSecure, appendLeadHistorySecure, updateNextActionSecure } from '@/app/actions/lead.actions'
-import { returnSingleLeadToPoolSecure, deleteLeadsSecure } from '@/app/actions/admin.actions'
+import { MyLead } from '@/components/colaborador/MyLeadsTable'
+
 interface InboxViewProps {
   targetUserId: string;
   viewerRole: 'admin' | 'collaborator';
@@ -65,91 +66,14 @@ export function InboxView({ targetUserId, viewerRole, viewerId }: InboxViewProps
   // Motor de Gamificação
   const { isAnimating } = useLeadGamification(counts.pendentes, counts.finalizados)
 
-  // Mutations (using viewerId for history_log author tracking)
-  const updateStatusMutation = useMutation({
-    mutationFn: ({ leadId, newStatus }: { leadId: string, newStatus: string }) => 
-      updateLeadStatusSecure(leadId, newStatus, viewerId),
-    onMutate: async ({ leadId, newStatus }) => {
-      await queryClient.cancelQueries({ queryKey: ['seller_leads', targetUserId] })
-      const previousLeads = queryClient.getQueryData(['seller_leads', targetUserId])
-      queryClient.setQueryData(['seller_leads', targetUserId], (old: any) => 
-        old?.map((l: any) => l.id === leadId ? { ...l, status: newStatus } : l)
-      )
-      return { previousLeads }
-    },
-    onSuccess: (_, { leadId, newStatus }) => {
-      if (newStatus === 'recuperado' || newStatus === 'perdido') {
-        setTimeout(() => {
-          queryClient.setQueryData(['seller_leads', targetUserId], (old: any) => 
-            old?.filter((l: any) => l.id !== leadId)
-          )
-          if (selectedLeadId === leadId) setSelectedLeadId(null)
-        }, 1500)
-      }
-    },
-    onError: (err, variables, context) => {
-      toast.error('Falha ao atualizar o status.')
-      if (context?.previousLeads) {
-        queryClient.setQueryData(['seller_leads', targetUserId], context.previousLeads)
-      }
-    }
-  })
-
-  const updateScheduleMutation = useMutation({
-    mutationFn: ({ leadId, nextActionAt }: { leadId: string, nextActionAt: string | null }) => 
-      updateNextActionSecure(leadId, nextActionAt, viewerId),
-    onMutate: async ({ leadId, nextActionAt }) => {
-      await queryClient.cancelQueries({ queryKey: ['seller_leads', targetUserId] })
-      const previousLeads = queryClient.getQueryData(['seller_leads', targetUserId])
-      queryClient.setQueryData(['seller_leads', targetUserId], (old: any) => 
-        old?.map((l: any) => l.id === leadId ? { ...l, next_action_at: nextActionAt } : l)
-      )
-      return { previousLeads }
-    },
-    onError: (err, variables, context) => {
-      toast.error('Falha ao atualizar o agendamento.')
-      if (context?.previousLeads) {
-        queryClient.setQueryData(['seller_leads', targetUserId], context.previousLeads)
-      }
-    }
-  })
-
-  const addNoteMutation = useMutation({
-    mutationFn: ({ leadId, text }: { leadId: string, text: string }) => 
-      appendLeadHistorySecure(leadId, viewerId, text),
-    onSuccess: (_, { leadId }) => {
-      queryClient.invalidateQueries({ queryKey: ['lead_events', leadId] })
-      toast.success('Anotação salva com sucesso!')
-    },
-    onError: () => {
-      toast.error('Falha ao salvar anotação.')
-    }
-  })
-
-  // === ADMIN MUTATIONS ===
-  const removeFromQueueMutation = useMutation({
-    mutationFn: (leadId: string) => returnSingleLeadToPoolSecure(leadId),
-    onSuccess: (_, leadId) => {
-      queryClient.setQueryData(['seller_leads', targetUserId], (old: any) => 
-        old?.filter((l: any) => l.id !== leadId)
-      )
-      if (selectedLeadId === leadId) setSelectedLeadId(null)
-      toast.success('Lead devolvido para a base geral!')
-    },
-    onError: () => toast.error('Falha ao remover lead da fila.')
-  })
-
-  const deleteLeadMutation = useMutation({
-    mutationFn: (leadId: string) => deleteLeadsSecure([leadId]),
-    onSuccess: (_, leadId) => {
-      queryClient.setQueryData(['seller_leads', targetUserId], (old: any) => 
-        old?.filter((l: any) => l.id !== leadId)
-      )
-      if (selectedLeadId === leadId) setSelectedLeadId(null)
-      toast.success('Lead excluído permanentemente!')
-    },
-    onError: () => toast.error('Falha ao excluir lead.')
-  })
+  // Custom hook de Mutações
+  const {
+    updateStatusMutation,
+    updateScheduleMutation,
+    addNoteMutation,
+    removeFromQueueMutation,
+    deleteLeadMutation
+  } = useLeadMutations(targetUserId, viewerId, () => setSelectedLeadId(null))
 
   const handleStatusChange = async (leadId: string, newStatus: string) => {
     await updateStatusMutation.mutateAsync({ leadId, newStatus })
@@ -171,12 +95,12 @@ export function InboxView({ targetUserId, viewerRole, viewerId }: InboxViewProps
     )
   }
 
-  const selectedLeadData = myLeads.find((l: any) => l.id === selectedLeadId) || null
+  const selectedLeadData = myLeads.find((l: MyLead) => l.id === selectedLeadId) || null
 
   // Virtualization Data Prep
   const groupNames: string[] = []
   const groupCounts: number[] = []
-  const flattenedLeads: any[] = []
+  const flattenedLeads: MyLead[] = []
 
   if (groupedLeads.agora.length > 0) {
     groupNames.push('Agora')

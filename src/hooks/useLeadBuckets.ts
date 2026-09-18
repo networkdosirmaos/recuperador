@@ -1,6 +1,7 @@
+import { MyLead } from '@/components/colaborador/MyLeadsTable'
 import { useState, useEffect, useMemo } from 'react'
 
-export function useLeadBuckets(myLeads: any[], selectedTab: 'pendentes' | 'em_andamento' | 'finalizados') {
+export function useLeadBuckets(myLeads: MyLead[], selectedTab: 'pendentes' | 'em_andamento' | 'finalizados') {
   // Relógio Fantasma (atualiza a cada 30 segundos)
   const [nowTick, setNowTick] = useState(Date.now())
   
@@ -16,17 +17,17 @@ export function useLeadBuckets(myLeads: any[], selectedTab: 'pendentes' | 'em_an
     let finalizados_count = 0
     let coolingDown_count = 0
     
-    const isApproved = (l: any) => l.status === 'recuperado'
-    const isLost = (l: any) => l.status === 'perdido'
-    const isOrganic = (l: any) => l.status === 'venda_organica' || l.gateway_event === 'purchase_approved' || l.gateway_status === 'approved'
+    const isApproved = (l: MyLead) => l.status === 'recuperado'
+    const isLost = (l: MyLead) => l.status === 'perdido'
+    const isOrganic = (l: MyLead) => l.status === 'venda_organica' || l.gateway_event === 'purchase_approved' || l.gateway_status === 'approved'
     
-    const isCoolingDown = (l: any) => {
+    const isCoolingDown = (l: MyLead) => {
       const isPixEvent = l.gateway_event === 'pix_generated' || l.gateway_event === 'pix_gerado' || l.gateway_event === 'waiting_payment';
       return isPixEvent && l.status === 'novo' && (nowTick - new Date(l.updated_at || l.created_at).getTime() < 6 * 60 * 1000);
     }
-    const isPastDue = (l: any) => l.next_action_at && new Date(l.next_action_at).getTime() <= nowTick
+    const isPastDue = (l: MyLead) => l.next_action_at && new Date(l.next_action_at).getTime() <= nowTick
 
-    const getBucket = (l: any) => {
+    const getBucket = (l: MyLead) => {
       if (isOrganic(l)) return 'ignorar'
       if (isApproved(l) || isLost(l)) return 'finalizados'
       if (isCoolingDown(l)) return 'geladeira'
@@ -34,7 +35,7 @@ export function useLeadBuckets(myLeads: any[], selectedTab: 'pendentes' | 'em_an
       return 'em_andamento'
     }
 
-    myLeads.forEach((l: any) => {
+    myLeads.forEach((l: MyLead) => {
       const bucket = getBucket(l)
       if (bucket === 'finalizados') finalizados_count++
       else if (bucket === 'geladeira') coolingDown_count++
@@ -42,16 +43,16 @@ export function useLeadBuckets(myLeads: any[], selectedTab: 'pendentes' | 'em_an
       else if (bucket === 'em_andamento') em_andamento_count++
     })
 
-    const filtered = myLeads.filter((l: any) => {
+    const filtered = myLeads.filter((l: MyLead) => {
       const bucket = getBucket(l)
       if (bucket === 'geladeira' || bucket === 'ignorar') return false
       return bucket === selectedTab
     })
 
     // Grouping by time
-    const grouped = { agora: [] as any[], hoje: [] as any[], antigos: [] as any[] }
+    const grouped = { agora: [] as MyLead[], hoje: [] as MyLead[], antigos: [] as MyLead[] }
     
-    filtered.forEach((l: any) => {
+    filtered.forEach((l: MyLead) => {
       const dateToCompare = l.next_action_at ? new Date(l.next_action_at) : new Date(l.created_at || l.updated_at)
       const diffMs = nowTick - dateToCompare.getTime()
       const diffHours = diffMs / (1000 * 60 * 60)

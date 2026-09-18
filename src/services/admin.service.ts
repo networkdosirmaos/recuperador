@@ -1,6 +1,46 @@
 import { supabase } from '@/lib/supabase'
 
 export const adminService = {
+  async getDashboardMetrics() {
+    const [
+      { count: total },
+      { count: pending },
+      { count: inProgress },
+      { count: recovered }
+    ] = await Promise.all([
+      supabase.from('leads').select('*', { count: 'exact', head: true }),
+      supabase.from('leads').select('*', { count: 'exact', head: true }).eq('status', 'novo'),
+      supabase.from('leads').select('*', { count: 'exact', head: true }).in('status', ['em_atendimento', 'boleto_gerado', 'pix_gerado']),
+      supabase.from('leads').select('*', { count: 'exact', head: true }).eq('status', 'recuperado')
+    ]);
+
+    const { data: leads } = await supabase
+      .from('leads')
+      .select('id, name, status, updated_at, product_name, gateway_event, profiles (full_name)')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    const formattedLeads = (leads || []).map(l => ({
+      id: l.id,
+      name: l.name,
+      product: l.product_name || 'N/A', 
+      event: l.gateway_event || '-',
+      status: l.status,
+      assigned_to: l.profiles ? (l.profiles as { full_name: string }).full_name : null,
+      updated_at: l.updated_at
+    }));
+
+    return {
+      metrics: {
+        total: total || 0,
+        pending: pending || 0,
+        inProgress: inProgress || 0,
+        recovered: recovered || 0
+      },
+      recentLeads: formattedLeads
+    };
+  },
+
   async getLeadLists() {
     const { data, error } = await supabase
       .from('lead_lists')

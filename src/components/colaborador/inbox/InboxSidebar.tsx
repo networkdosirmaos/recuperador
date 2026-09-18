@@ -332,7 +332,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
                 </div>
                 <div className="flex items-center gap-3 text-[13px] text-gray-600">
                   <DollarSign className="w-4 h-4 text-gray-400" />
-                  <span>RT {lead.gateway_metadata && (lead.gateway_metadata as any).amount ? ((lead.gateway_metadata as any).amount / 100).toFixed(2) : '-'}</span>
+                  <span>RT {lead.gateway_metadata && (lead.gateway_metadata as { amount?: number }).amount ? ((lead.gateway_metadata as { amount?: number }).amount! / 100).toFixed(2) : '-'}</span>
                 </div>
                 <div className="flex items-center gap-3 text-[13px] text-gray-600">
                   <Phone className="w-4 h-4 text-gray-400" />
