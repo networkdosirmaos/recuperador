@@ -139,7 +139,6 @@ function BaseDeLeadsContent() {
     
     if (override) {
       setSearchTerm(override.term)
-      setSelectedStatus(override.status)
       setActiveFilters({
         listId: selectedList,
         status: override.status,
@@ -148,7 +147,7 @@ function BaseDeLeadsContent() {
     } else {
       setActiveFilters({
         listId: selectedList,
-        status: selectedStatus,
+        status: 'all',
         searchTerm: searchTerm
       })
     }
@@ -192,31 +191,27 @@ function BaseDeLeadsContent() {
         <p className="text-gray-500 mt-1">Filtre suas origens e visualize toda a sua base de clientes.</p>
       </div>
 
-      {/* PAINEL DE FILTROS */}
-      <form onSubmit={executeSearch} className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 space-y-4">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Pesquisar Cliente</label>
-            <div className="relative">
-              <Search className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
-              <input 
-                type="text" 
-                placeholder="Nome, e-mail ou telefone..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
+      {/* PAINEL DE FILTROS - BARRA ÚNICA */}
+      <form onSubmit={executeSearch} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+        <div className="flex flex-col md:flex-row gap-4 items-center">
+          <div className="flex-1 w-full relative">
+            <Search className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
+            <input 
+              type="text" 
+              placeholder="🔍 Buscar por nome, e-mail ou telefone..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-gray-50/50 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+            />
           </div>
           
           <div className="w-full md:w-64">
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Origem / Lista</label>
             <select 
               value={selectedList}
               onChange={(e) => setSelectedList(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-700"
+              className="w-full px-4 py-2 bg-gray-50/50 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-700 transition-colors cursor-pointer"
             >
-              <option value="all">Todas as Origens</option>
+              <option value="all">📁 Todas as Origens</option>
               {lists.map(list => (
                 <option key={list.id} value={list.id}>
                   {list.type === 'webhook_cakto' ? '⚡ ' : '📁 '}{list.name}
@@ -225,54 +220,10 @@ function BaseDeLeadsContent() {
             </select>
           </div>
 
-          <div className="w-full md:w-48">
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Status CRM</label>
-            <select 
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-700"
-            >
-              <option value="all">Qualquer Status</option>
-              <option value="novo">Novo na Fila</option>
-              <option value="em_atendimento">Em Atendimento</option>
-              <option value="recuperado">Recuperado (Afiliado)</option>
-              <option value="venda_organica">Venda Orgânica</option>
-              <option value="perdido">Perdido</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-gray-100 mt-4">
-          
-          {/* QUICK FILTERS */}
-          <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 hide-scrollbar">
-            <button
-              type="button"
-              onClick={() => executeSearch(undefined, { term: 'pix', status: 'novo' })}
-              className="whitespace-nowrap px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 rounded-full text-xs font-bold transition-colors"
-            >
-              🧊 Em Geladeira
-            </button>
-            <button
-              type="button"
-              onClick={() => executeSearch(undefined, { term: '', status: 'venda_organica' })}
-              className="whitespace-nowrap px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-full text-xs font-bold transition-colors"
-            >
-              💰 Vendas Orgânicas
-            </button>
-            <button
-              type="button"
-              onClick={() => executeSearch(undefined, { term: 'abandoned', status: 'novo' })}
-              className="whitespace-nowrap px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 rounded-full text-xs font-bold transition-colors"
-            >
-              🛑 Abandonos
-            </button>
-          </div>
-
           <button 
             type="submit" 
             disabled={searching}
-            className="flex items-center gap-2 px-6 py-2 bg-[#7c3aed] text-white font-medium rounded-lg hover:bg-[#6d28d9] transition-colors shadow-sm"
+            className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-[#7c3aed] text-white font-medium rounded-lg hover:bg-[#6d28d9] transition-colors shadow-sm whitespace-nowrap"
           >
             {searching ? <Loader2 className="w-5 h-5 animate-spin" /> : <Filter className="w-5 h-5" />}
             Aplicar Filtros
