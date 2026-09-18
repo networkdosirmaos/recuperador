@@ -17,11 +17,11 @@ export function InboxKPIs({ pendentes, emAndamento, finalizados, animate, active
       {/* 1. Pendentes (Fogo / Urgência) */}
       <button 
         onClick={() => onTabChange('pendentes')}
-        className={`w-[75vw] min-w-[220px] max-w-[280px] shrink-0 snap-start md:w-auto md:min-w-0 md:max-w-none md:shrink text-left bg-white rounded-xl p-4 md:p-6 flex items-center shadow-sm transition-all duration-300 cursor-pointer outline-none focus:outline-none hover:shadow-md border ${
+        className={`w-[75vw] min-w-[220px] max-w-[280px] shrink-0 snap-start md:w-auto md:min-w-0 md:max-w-none md:shrink text-left bg-white rounded-xl p-4 md:p-6 flex items-center transition-all duration-300 cursor-pointer outline-none focus:outline-none border border-gray-200 ${
           activeTab === 'pendentes' 
-            ? 'border-red-500 shadow-md ring-1 ring-red-500' 
-            : 'border-transparent opacity-80 hover:opacity-100'
-        } ${animate && activeTab === 'pendentes' ? 'ring-4 ring-red-500/20 z-10' : ''}`}
+            ? 'shadow-md opacity-100' 
+            : 'shadow-sm opacity-60 hover:opacity-100'
+        } ${animate && activeTab === 'pendentes' ? 'ring-4 ring-red-500/10 z-10' : ''}`}
       >
         <div className={`mr-4 flex-shrink-0 transition-colors ${pendentes > 0 ? 'text-red-500' : 'text-gray-300'}`}>
           <Flame className="w-8 h-8 md:w-10 md:h-10" />
@@ -35,10 +35,10 @@ export function InboxKPIs({ pendentes, emAndamento, finalizados, animate, active
       {/* 2. Em Andamento */}
       <button 
         onClick={() => onTabChange('em_andamento')}
-        className={`w-[75vw] min-w-[220px] max-w-[280px] shrink-0 snap-start md:w-auto md:min-w-0 md:max-w-none md:shrink text-left bg-white rounded-xl p-4 md:p-6 flex items-center shadow-sm transition-all duration-300 cursor-pointer outline-none focus:outline-none hover:shadow-md border ${
+        className={`w-[75vw] min-w-[220px] max-w-[280px] shrink-0 snap-start md:w-auto md:min-w-0 md:max-w-none md:shrink text-left bg-white rounded-xl p-4 md:p-6 flex items-center transition-all duration-300 cursor-pointer outline-none focus:outline-none border border-gray-200 ${
           activeTab === 'em_andamento' 
-            ? 'border-yellow-500 shadow-md ring-1 ring-yellow-500' 
-            : 'border-transparent opacity-80 hover:opacity-100'
+            ? 'shadow-md opacity-100' 
+            : 'shadow-sm opacity-60 hover:opacity-100'
         }`}
       >
         <div className="mr-4 flex-shrink-0 text-yellow-500 transition-colors">
@@ -53,10 +53,10 @@ export function InboxKPIs({ pendentes, emAndamento, finalizados, animate, active
       {/* 3. Finalizados */}
       <button 
         onClick={() => onTabChange('finalizados')}
-        className={`w-[75vw] min-w-[220px] max-w-[280px] shrink-0 snap-start md:w-auto md:min-w-0 md:max-w-none md:shrink text-left bg-white rounded-xl p-4 md:p-6 flex items-center shadow-sm transition-all duration-300 cursor-pointer outline-none focus:outline-none hover:shadow-md border ${
+        className={`w-[75vw] min-w-[220px] max-w-[280px] shrink-0 snap-start md:w-auto md:min-w-0 md:max-w-none md:shrink text-left bg-white rounded-xl p-4 md:p-6 flex items-center transition-all duration-300 cursor-pointer outline-none focus:outline-none border border-gray-200 ${
           activeTab === 'finalizados' 
-            ? 'border-green-500 shadow-md ring-1 ring-green-500' 
-            : 'border-transparent opacity-80 hover:opacity-100'
+            ? 'shadow-md opacity-100' 
+            : 'shadow-sm opacity-60 hover:opacity-100'
         }`}
       >
         <div className="mr-4 flex-shrink-0 text-green-500 transition-colors">

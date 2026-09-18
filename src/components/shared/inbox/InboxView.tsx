@@ -137,9 +137,38 @@ export function InboxView({ targetUserId, viewerRole, viewerId }: InboxViewProps
         </div>
       )}
 
-      <div className="hidden md:block">
-        <h1 className="text-[28px] font-bold text-[#1a1d23]">{viewerRole === 'admin' ? `Fila de ${profile?.full_name || 'Vendedor'}` : 'Minha fila'}</h1>
-        <p className="text-[#6b7280] mt-1 text-[15px]">Leads que precisam de atenção agora.</p>
+      <div className="flex justify-between items-end mb-6">
+        <div className="hidden md:block">
+          <h1 className="text-[28px] font-bold text-[#1a1d23]">{viewerRole === 'admin' ? `Fila de ${profile?.full_name || 'Vendedor'}` : 'Minha fila'}</h1>
+          <p className="text-[#6b7280] mt-1 text-[15px]">Leads que precisam da sua atenção.</p>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {/* Mensagem sutil de sucesso */}
+          {showRefreshSuccess && (
+            <span className="text-xs font-medium text-emerald-600 animate-in fade-in slide-in-from-right-2 duration-300">
+              Atualizada
+            </span>
+          )}
+
+          {/* Botão de Refresh */}
+          <button
+            onClick={handleRefresh}
+            disabled={isFetching}
+            className={`flex items-center justify-center p-2.5 md:p-2 bg-white rounded-lg border shadow-sm transition-colors ${showRefreshSuccess ? 'border-emerald-200 text-emerald-600' : 'border-gray-200 text-[#6b7280] hover:text-indigo-600'}`}
+            title="Atualizar fila"
+          >
+            {showRefreshSuccess ? (
+              <Check className="w-5 h-5 md:w-4 md:h-4" />
+            ) : (
+              <RefreshCw className={`w-5 h-5 md:w-4 md:h-4 ${isFetching ? 'animate-spin text-indigo-600' : ''}`} />
+            )}
+          </button>
+
+          <div className="hidden md:flex items-center gap-1 text-[#6b7280] text-sm font-medium cursor-pointer hover:text-gray-900 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
+            Mais recentes <ChevronDown className="w-4 h-4" />
+          </div>
+        </div>
       </div>
 
       {!isActive ? (
@@ -164,68 +193,6 @@ export function InboxView({ targetUserId, viewerRole, viewerId }: InboxViewProps
           </div>
         </div>
       )}
-
-      {/* HEADER DINÂMICO */}
-      <div className="mb-6 flex justify-between items-end">
-        <div>
-          <h1 className="text-[26px] font-bold text-[#1a1d23] mb-1 tracking-tight">Central de Leads{profile?.full_name && viewerRole === 'collaborator' ? `, ${profile.full_name.split(' ')[0]}` : ''}</h1>
-          <p className="text-[#6b7280] text-[15px]">{viewerRole === 'admin' ? 'Acompanhando a esteira de atendimento.' : 'Aqui está o que exige sua atenção hoje.'}</p>
-          {viewerRole === 'collaborator' && (profile?.affiliate_link || profile?.sales_link) && (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {profile?.affiliate_link && (
-                <button 
-                  onClick={() => {
-                    navigator.clipboard.writeText(profile.affiliate_link)
-                    toast.success('Link do Checkout copiado!')
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-semibold rounded-lg border border-indigo-100 transition-colors"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                  Copiar Checkout
-                </button>
-              )}
-              {profile?.sales_link && (
-                <button 
-                  onClick={() => {
-                    navigator.clipboard.writeText(profile.sales_link)
-                    toast.success('Link da Página de Vendas copiado!')
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-sm font-semibold rounded-lg border border-emerald-100 transition-colors"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                  Copiar Pág. de Vendas
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Mensagem sutil de sucesso */}
-          {showRefreshSuccess && (
-            <span className="text-xs font-medium text-emerald-600 animate-in fade-in slide-in-from-right-2 duration-300">
-              Atualizada
-            </span>
-          )}
-
-          {/* Botão de Refresh (Mobile e Desktop) */}
-          <button
-            onClick={handleRefresh}
-            disabled={isFetching}
-            className={`flex items-center justify-center p-2.5 md:p-2 bg-white rounded-lg border shadow-sm transition-colors ${showRefreshSuccess ? 'border-emerald-200 text-emerald-600' : 'border-gray-200 text-[#6b7280] hover:text-indigo-600'}`}
-            title="Atualizar fila"
-          >
-            {showRefreshSuccess ? (
-              <Check className="w-5 h-5 md:w-4 md:h-4" />
-            ) : (
-              <RefreshCw className={`w-5 h-5 md:w-4 md:h-4 ${isFetching ? 'animate-spin text-indigo-600' : ''}`} />
-            )}
-          </button>
-
-          <div className="hidden md:flex items-center gap-1 text-[#6b7280] text-sm font-medium cursor-pointer hover:text-gray-900 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
-            Mais recentes <ChevronDown className="w-4 h-4" />
-          </div>
-        </div>
-      </div>
 
       {/* KPIs INTERATIVOS (Botões de Abas) */}
       <InboxKPIs 
