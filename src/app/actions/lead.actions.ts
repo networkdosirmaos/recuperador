@@ -1,35 +1,29 @@
 "use server"
 
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { createClient } from '@/utils/supabase/server'
 
-// Ação Segura: Atualizar o Status do Lead
+// Ação Autenticada: Atualizar o Status do Lead (RLS Protege)
 export async function updateLeadStatusSecure(leadId: string, newStatus: string, userId: string) {
-  // Verificação de Segurança (Backend)
-  const { data: lead } = await supabaseAdmin.from('leads').select('current_assignee_id').eq('id', leadId).single()
-  
-  if (!lead || lead.current_assignee_id !== userId) {
-    throw new Error('Acesso negado: Você não é dono deste lead.')
-  }
+  const supabase = await createClient()
 
-  const { error } = await supabaseAdmin
+  // O banco de dados vai recusar o update se o usuário logado não for o dono do lead
+  const { error } = await supabase
     .from('leads')
     .update({ status: newStatus, updated_at: new Date().toISOString() })
     .eq('id', leadId)
     
-  if (error) throw error
+  if (error) {
+    console.error("Erro no updateLeadStatusSecure:", error)
+    throw new Error('Acesso negado ou erro ao atualizar o lead.')
+  }
   return true
 }
 
-// Ação Segura: Append no History Log (Usando a Procedure RPC)
+// Ação Autenticada: Inserir log no histórico (RLS Protege)
 export async function appendLeadHistorySecure(leadId: string, userId: string, text: string) {
-  // Verificação de Segurança (Backend)
-  const { data: lead } = await supabaseAdmin.from('leads').select('current_assignee_id').eq('id', leadId).single()
-  
-  if (!lead || lead.current_assignee_id !== userId) {
-    throw new Error('Acesso negado: Você não é dono deste lead.')
-  }
+  const supabase = await createClient()
 
-  const { error } = await supabaseAdmin.from('lead_events').insert({
+  const { error } = await supabase.from('lead_events').insert({
     lead_id: leadId,
     gateway_event: 'HUMAN_NOTE',
     reason: text,
@@ -37,14 +31,25 @@ export async function appendLeadHistorySecure(leadId: string, userId: string, te
     metadata: { created_by: userId }
   })
 
-  if (error) throw error
+  if (error) {
+    console.error("Erro no appendLeadHistorySecure:", error)
+    throw new Error('Acesso negado ou erro ao inserir nota.')
+  }
   return true
 }
  
+// Ação Autenticada: Atualizar próximo contato (RLS Protege)
 export async function updateNextActionSecure(leadId: string, nextActionAt: string | null, userId: string) {  
-  const { data: lead } = await supabaseAdmin.from('leads').select('current_assignee_id').eq('id', leadId).single()  
-  if (!lead || lead.current_assignee_id !== userId) throw new Error('Acesso negado')  
-  const { error } = await supabaseAdmin.from('leads').update({ next_action_at: nextActionAt, updated_at: new Date().toISOString() }).eq('id', leadId)  
-  if (error) throw error  
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('leads')
+    .update({ next_action_at: nextActionAt, updated_at: new Date().toISOString() })
+    .eq('id', leadId)  
+
+  if (error) {
+    console.error("Erro no updateNextActionSecure:", error)
+    throw new Error('Acesso negado ou erro ao agendar lead.')
+  }
   return true  
-} 
+}
