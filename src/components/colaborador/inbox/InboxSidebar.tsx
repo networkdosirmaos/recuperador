@@ -255,23 +255,24 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
             <div className="h-px bg-gray-100 -mx-4"></div>
             
             <div className="flex flex-col md:flex-row gap-4 pt-2">
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <label className="block text-[11px] font-bold text-gray-700 mb-2">Status</label>
                 <select 
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-700 text-[13px] font-medium"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-700 text-[13px] font-medium appearance-none"
+                  style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")', backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
                 >
                   <option value="novo">Novo</option>
-                  <option value="em_atendimento">Aguardando pagamento / Retorno</option>
-                  <option value="recuperado">Recuperado (Venda Fechada)</option>
-                  <option value="perdido">Perdido (Não comprou)</option>
+                  <option value="em_atendimento">Aguardando pagamento</option>
+                  <option value="recuperado">Recuperado</option>
+                  <option value="perdido">Perdido</option>
                 </select>
               </div>
               
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <label className="block text-[11px] font-bold text-gray-700 mb-2">Próximo passo</label>
-                <div className="flex items-center gap-4 mb-2">
+                <div className="flex items-center gap-3 mb-2 whitespace-nowrap">
                   <label className="flex items-center gap-1.5 cursor-pointer">
                     <input 
                       type="radio" 
@@ -280,7 +281,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
                       onChange={() => setNextStep('agendar')}
                       className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500"
                     />
-                    <span className="text-[13px] text-gray-700">Agendar retorno</span>
+                    <span className="text-[13px] text-gray-700">Agendar</span>
                   </label>
                   <label className="flex items-center gap-1.5 cursor-pointer">
                     <input 
@@ -312,7 +313,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
             <button 
               onClick={handleSaveForm}
               disabled={isUpdating}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors shadow-sm mt-4 text-[14px] disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-[#6366f1] hover:bg-[#4f46e5] text-white font-bold rounded-lg transition-colors shadow-sm mt-4 text-[14px] disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {isUpdating ? 'Salvando...' : 'Salvar atendimento'}
             </button>
@@ -336,21 +337,21 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
             </button>
             {showDataLinks && (
               <div className="p-4 border-t border-gray-100 space-y-3 bg-gray-50/50">
-                <div className="flex items-center gap-3 text-[13px] text-gray-600">
-                  <Building className="w-4 h-4 text-gray-400" />
-                  <span className="font-medium">{lead.product_name || '-'}</span>
+                <div className="flex items-start gap-3 text-[13px] text-gray-600">
+                  <Building className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
+                  <span className="font-medium leading-tight">{lead.product_name || '-'}</span>
                 </div>
                 <div className="flex items-center gap-3 text-[13px] text-gray-600">
-                  <DollarSign className="w-4 h-4 text-gray-400" />
+                  <DollarSign className="w-4 h-4 text-gray-400 shrink-0" />
                   <span>RT {lead.gateway_metadata && (lead.gateway_metadata as { amount?: number }).amount ? ((lead.gateway_metadata as { amount?: number }).amount! / 100).toFixed(2) : '-'}</span>
                 </div>
                 <div className="flex items-center gap-3 text-[13px] text-gray-600">
-                  <Phone className="w-4 h-4 text-gray-400" />
+                  <Phone className="w-4 h-4 text-gray-400 shrink-0" />
                   <span>{lead.phone || '-'}</span>
                 </div>
                 <div className="flex items-center gap-3 text-[13px] text-gray-600">
-                  <MessageCircle className="w-4 h-4 text-gray-400" />
-                  <span>{canSeeEmail ? (lead.email || '-') : '***@***.com'}</span>
+                  <MessageCircle className="w-4 h-4 text-gray-400 shrink-0" />
+                  <span className="truncate">{canSeeEmail ? (lead.email || '-') : '***@***.com'}</span>
                 </div>
                 
                 {(affiliateLink || salesLink) && (
@@ -372,7 +373,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
                           navigator.clipboard.writeText(salesLink)
                           toast.success('Página de Vendas copiada!')
                         }}
-                        className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-lg border border-gray-200 transition-colors text-[13px]"
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-lg border border-gray-200 transition-colors text-[13px]"
                       >
                         <Copy className="w-3.5 h-3.5" /> Copiar Pág. de Vendas
                       </button>
