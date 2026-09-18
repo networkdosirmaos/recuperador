@@ -29,9 +29,6 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
   const [scheduleDate, setScheduleDate] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
   
-  // Accordions state
-  const [showDataLinks, setShowDataLinks] = useState(false)
-
   const { data: recommendedScripts = [] } = useQuery({
     queryKey: ['recommended_scripts', lead?.id, lead?.gateway_status, lead?.gateway_event],
     queryFn: () => {
@@ -61,7 +58,6 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
     if (lead) {
       setNoteText('')
       setStatus(lead.status || 'em_atendimento')
-      setShowDataLinks(false)
       
       // Setup schedule date
       if (lead.next_action_at) {
@@ -100,7 +96,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
   const handleCopyScript = (content: string) => {
     const text = parseScriptVariables(content)
     navigator.clipboard.writeText(text)
-    toast.success('Script copiado com as variaveis preenchidas!')
+    toast.success('Script copiado!')
   }
 
   const handleSendScript = (content: string) => {
@@ -144,7 +140,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
     try {
       await onSaveNote(lead.id!, noteText)
       setNoteText('')
-      refetchEvents() // Recarrega os eventos para ver o comentário instantaneamente
+      refetchEvents()
     } catch (err) {
       toast.error('Erro ao enviar comentário')
     } finally {
@@ -163,31 +159,37 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
     return event.replace('_', ' ')
   }
 
+  const getEventBannerStyles = (event?: string | null) => {
+    const type = event || ''
+    if (type === 'pix_generated' || type === 'waiting_payment') {
+      return 'bg-blue-50 border-blue-200 text-blue-700'
+    } else if (type === 'purchase_refused') {
+      return 'bg-red-50 border-red-200 text-red-700'
+    } else if (type === 'checkout_abandoned') {
+      return 'bg-orange-50 border-orange-200 text-orange-700'
+    } else if (type === 'purchase_approved') {
+      return 'bg-green-50 border-green-200 text-green-700'
+    }
+    return 'bg-gray-50 border-gray-200 text-gray-700'
+  }
+
   return (
     <div className="fixed inset-y-0 right-0 w-full md:w-[450px] bg-white border-l border-gray-200 shadow-2xl flex flex-col z-50 transform transition-transform duration-300 ease-in-out translate-x-0">
       
-      {/* HEADER FIXO */}
-      <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between bg-white shrink-0 z-10">
+      {/* FASE 1: HEADER FIXO (Contexto Imediato) */}
+      <div className="px-6 py-4 border-b border-gray-100 flex items-start justify-between bg-white shrink-0 z-10">
         <div className="flex-1">
-          <h2 className="text-[20px] font-bold text-gray-900 leading-tight mb-1">{lead.name}</h2>
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className="px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-gray-100 text-gray-700 whitespace-nowrap">
-              {translateEvent(lead.gateway_event)}
-            </span>
+          <div className="flex items-center gap-2 mb-1">
+            <h2 className="text-[20px] font-bold text-gray-900 leading-tight">{lead.name}</h2>
             {lead.temperature === 'quente' && (
               <span className="px-2 py-0.5 rounded-md text-[11px] font-medium whitespace-nowrap bg-orange-50 text-orange-700 flex items-center gap-1">
                 🔥 Quente
               </span>
             )}
-            {lead.status === 'em_atendimento' && (
-              <span className="px-2 py-0.5 rounded-md text-[11px] font-medium whitespace-nowrap bg-yellow-50 text-yellow-700 flex items-center gap-1">
-                🔥 Em atendimento
-              </span>
-            )}
           </div>
-          <div className="flex items-center gap-1.5 text-[13px] text-gray-500 font-medium">
-            <Package className="w-4 h-4 text-gray-400" />
-            <span className="truncate max-w-[280px]">{lead.product_name || 'Produto não identificado'}</span>
+          <div className="flex items-center gap-1.5 text-[12px] text-gray-500 font-medium">
+            <Clock className="w-3.5 h-3.5" />
+            <span>Entrou há {lead.created_at ? formatDistanceToNow(new Date(lead.created_at), { locale: ptBR }) : 'Desconhecido'}</span>
           </div>
         </div>
         <button 
@@ -202,125 +204,136 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
       <div className="flex-1 overflow-y-auto bg-[#f9fafb] flex flex-col" ref={scrollRef}>
         <div className="p-6 space-y-6 flex-1">
           
-          {/* AÇÕES RÁPIDAS */}
-          <div className="flex gap-3 bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-            <div className="flex-1 min-w-0">
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Status do Lead</label>
-              <select 
-                value={status}
-                onChange={(e) => handleStatusChange(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-50 hover:bg-gray-100 cursor-pointer border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-700 text-[13px] font-bold appearance-none transition-colors"
-                style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")', backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
-              >
-                <option value="novo">Novo</option>
-                <option value="em_atendimento">Em andamento</option>
-                <option value="recuperado">Recuperado (Ganho)</option>
-                <option value="perdido">Perdido</option>
-              </select>
+          {/* FASE 2: DADOS DO LEAD E PRODUTO (Sem Sanfona) */}
+          <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-4">
+            
+            {/* Dados do Cliente */}
+            <div>
+              <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Contato</h4>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 text-[13px] text-gray-700">
+                  <Phone className="w-4 h-4 text-gray-400 shrink-0" />
+                  <span className="font-medium">{lead.phone || '-'}</span>
+                </div>
+                <div className="flex items-center gap-3 text-[13px] text-gray-700">
+                  <MessageCircle className="w-4 h-4 text-gray-400 shrink-0" />
+                  <span className="truncate">{canSeeEmail ? (lead.email || '-') : '***@***.com'}</span>
+                </div>
+              </div>
             </div>
             
-            <div className="flex-1 min-w-0">
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Agendar Retorno</label>
-              <div className="relative">
-                <input
-                  type="datetime-local"
-                  value={scheduleDate}
-                  onChange={handleScheduleChange}
-                  className="w-full pl-9 pr-3 py-2 bg-gray-50 hover:bg-gray-100 cursor-pointer border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-700 text-[13px] font-bold transition-colors"
-                />
-                <Calendar className="w-4 h-4 text-gray-400 absolute left-3 top-2.5 pointer-events-none" />
+            <div className="h-px bg-gray-100 -mx-4"></div>
+            
+            {/* Dados do Produto */}
+            <div>
+              <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Produto</h4>
+              <div className="space-y-2">
+                <div className="flex items-start gap-3 text-[13px] text-gray-700">
+                  <Package className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
+                  <span className="font-bold leading-tight">{lead.product_name || '-'}</span>
+                </div>
+                <div className="flex items-center gap-3 text-[13px] text-gray-700">
+                  <DollarSign className="w-4 h-4 text-gray-400 shrink-0" />
+                  <span>RT {lead.gateway_metadata && (lead.gateway_metadata as { amount?: number }).amount ? ((lead.gateway_metadata as { amount?: number }).amount! / 100).toFixed(2) : '-'}</span>
+                </div>
               </div>
+              
+              {(affiliateLink || salesLink) && (
+                <div className="pt-3 flex gap-2">
+                  {affiliateLink && (
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(affiliateLink)
+                        toast.success('Link de Checkout copiado!')
+                      }} 
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 font-semibold rounded-lg border border-gray-200 transition-colors text-[12px]"
+                    >
+                      <Copy className="w-3.5 h-3.5" /> Checkout
+                    </button>
+                  )}
+                  {salesLink && (
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(salesLink)
+                        toast.success('Página de Vendas copiada!')
+                      }} 
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 font-semibold rounded-lg border border-gray-200 transition-colors text-[12px]"
+                    >
+                      <Copy className="w-3.5 h-3.5" /> Pág. Vendas
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* SCRIPT SUGERIDO */}
-          {recommendedScripts.length > 0 && (
-            <div>
-              <h3 className="text-[13px] font-bold text-gray-900 mb-2">Script Sugerido</h3>
+          {/* FASE 3: PROBLEMA E SOLUÇÃO (Evento + Script) */}
+          <div>
+            <div className={`mb-3 px-4 py-3 rounded-xl border flex items-center gap-3 shadow-sm ${getEventBannerStyles(lead.gateway_event)}`}>
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <span className="text-[13px] font-bold uppercase tracking-wide">
+                Motivo: {translateEvent(lead.gateway_event)}
+              </span>
+            </div>
+
+            {recommendedScripts.length > 0 && (
               <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-4 shadow-sm relative">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-[11px] font-bold text-indigo-900/60 uppercase tracking-wider">Script Sugerido</h3>
+                  <button onClick={() => handleCopyScript(recommendedScripts[0].content)} className="flex items-center gap-1.5 px-2 py-1 bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 text-[11px] font-bold rounded transition-colors">
+                    <Copy className="w-3 h-3" /> Copiar
+                  </button>
+                </div>
                 <p className="text-[14px] text-indigo-900 whitespace-pre-wrap leading-relaxed mb-4">
                   {parseScriptVariables(recommendedScripts[0].content)}
                 </p>
                 <button 
-                  onClick={() => handleCopyScript(recommendedScripts[0].content)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg transition-colors"
+                  onClick={() => handleSendScript(recommendedScripts[0].content)}
+                  className="w-full mt-1 flex items-center justify-center gap-2 px-4 py-3 bg-[#10b981] hover:bg-[#059669] text-white font-bold rounded-xl transition-all shadow-sm shadow-green-500/20 text-[14px]"
                 >
-                  <Copy className="w-3.5 h-3.5" /> Copiar
+                  <MessageCircle className="w-4 h-4" />
+                  Abrir WhatsApp com texto
                 </button>
-              </div>
-              <button 
-                onClick={() => handleSendScript(recommendedScripts[0].content)}
-                className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-3 bg-[#10b981] hover:bg-[#059669] text-white font-bold rounded-xl transition-all shadow-sm shadow-green-500/20 text-[14px]"
-              >
-                <MessageCircle className="w-4 h-4" />
-                Abrir WhatsApp com texto
-              </button>
-            </div>
-          )}
-
-          {/* ACCORDION: DADOS E LINKS */}
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-            <button 
-              onClick={() => setShowDataLinks(!showDataLinks)}
-              className="w-full flex items-center justify-between p-4 bg-white hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center gap-2 text-gray-700 font-semibold text-[13px]">
-                <Package className="w-4 h-4 text-gray-400" />
-                Dados e links do produto
-              </div>
-              {showDataLinks ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
-            </button>
-            {showDataLinks && (
-              <div className="p-4 border-t border-gray-100 space-y-3 bg-gray-50/50">
-                <div className="flex items-start gap-3 text-[13px] text-gray-600">
-                  <Building className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
-                  <span className="font-medium leading-tight">{lead.product_name || '-'}</span>
-                </div>
-                <div className="flex items-center gap-3 text-[13px] text-gray-600">
-                  <DollarSign className="w-4 h-4 text-gray-400 shrink-0" />
-                  <span>RT {lead.gateway_metadata && (lead.gateway_metadata as { amount?: number }).amount ? ((lead.gateway_metadata as { amount?: number }).amount! / 100).toFixed(2) : '-'}</span>
-                </div>
-                <div className="flex items-center gap-3 text-[13px] text-gray-600">
-                  <Phone className="w-4 h-4 text-gray-400 shrink-0" />
-                  <span>{lead.phone || '-'}</span>
-                </div>
-                <div className="flex items-center gap-3 text-[13px] text-gray-600">
-                  <MessageCircle className="w-4 h-4 text-gray-400 shrink-0" />
-                  <span className="truncate">{canSeeEmail ? (lead.email || '-') : '***@***.com'}</span>
-                </div>
-                
-                {(affiliateLink || salesLink) && (
-                  <div className="pt-3 space-y-2">
-                    {affiliateLink && (
-                      <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(affiliateLink)
-                          toast.success('Link de Checkout copiado!')
-                        }}
-                        className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-lg border border-gray-200 transition-colors text-[13px]"
-                      >
-                        <Copy className="w-3.5 h-3.5" /> Copiar Checkout
-                      </button>
-                    )}
-                    {salesLink && (
-                      <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(salesLink)
-                          toast.success('Página de Vendas copiada!')
-                        }}
-                        className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-lg border border-gray-200 transition-colors text-[13px]"
-                      >
-                        <Copy className="w-3.5 h-3.5" /> Copiar Pág. de Vendas
-                      </button>
-                    )}
-                  </div>
-                )}
               </div>
             )}
           </div>
 
-          {/* LINHA DO TEMPO (HISTÓRICO) */}
-          <div className="pt-4">
+          {/* FASE 4: GESTÃO DO LEAD (Sessão de Follow-up) */}
+          <div>
+            <h3 className="text-[13px] font-bold text-gray-900 mb-2">Pós-Abordagem</h3>
+            <div className="flex gap-3 bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+              <div className="flex-1 min-w-0">
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Status do Lead</label>
+                <select 
+                  value={status}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-50 hover:bg-gray-100 cursor-pointer border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-700 text-[13px] font-bold appearance-none transition-colors"
+                  style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")', backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
+                >
+                  <option value="novo">Novo</option>
+                  <option value="em_atendimento">Em andamento</option>
+                  <option value="recuperado">Recuperado (Ganho)</option>
+                  <option value="perdido">Perdido</option>
+                </select>
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Agendar Retorno</label>
+                <div className="relative">
+                  <input
+                    type="datetime-local"
+                    value={scheduleDate}
+                    onChange={handleScheduleChange}
+                    className="w-full pl-9 pr-3 py-2 bg-gray-50 hover:bg-gray-100 cursor-pointer border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-700 text-[13px] font-bold transition-colors"
+                  />
+                  <Calendar className="w-4 h-4 text-gray-400 absolute left-3 top-2.5 pointer-events-none" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* FASE 5: LINHA DO TEMPO (HISTÓRICO) */}
+          <div className="pt-4 border-t border-gray-200">
             <h3 className="text-[13px] font-bold text-gray-900 mb-4 flex items-center gap-2">
               <Activity className="w-4 h-4 text-gray-400" />
               Linha do Tempo
