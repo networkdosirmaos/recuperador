@@ -5,7 +5,6 @@ import { Users, Clock, Headset, CheckCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { KpiCard } from '@/components/KpiCard'
 import { RecentLeadsTable } from '@/components/RecentLeadsTable'
-import { TeamRanking } from '@/components/TeamRanking'
 import { HeatSettings } from '@/utils/heatCalculator'
 
 export default function AdminDashboard() {
@@ -18,8 +17,6 @@ export default function AdminDashboard() {
     recovered: 0
   })
   const [recentLeads, setRecentLeads] = useState<any[]>([])
-  // We'll leave team ranking empty for now until we have actual sales data to group
-  const [teamRanking, setTeamRanking] = useState<any[]>([]) 
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -56,6 +53,7 @@ export default function AdminDashboard() {
             status,
             updated_at,
             product_name,
+            gateway_event,
             profiles (
               full_name
             )
@@ -72,6 +70,7 @@ export default function AdminDashboard() {
             id: l.id,
             name: l.name,
             product: l.product_name || 'N/A', 
+            event: l.gateway_event || '-',
             status: l.status,
             assigned_to: l.profiles ? (l.profiles as any).full_name : null,
             updated_at: l.updated_at
@@ -132,14 +131,9 @@ export default function AdminDashboard() {
         />
       </div>
 
-      {/* Main Content Split */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <RecentLeadsTable leads={recentLeads} heatSettings={heatSettings} />
-        </div>
-        <div>
-          <TeamRanking team={teamRanking} />
-        </div>
+      {/* Main Content */}
+      <div>
+        <RecentLeadsTable leads={recentLeads} heatSettings={heatSettings} />
       </div>
     </div>
   )

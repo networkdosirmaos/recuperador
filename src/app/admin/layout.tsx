@@ -83,7 +83,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       items: [
         { name: 'Equipe', href: '/admin/equipe', icon: Users },
         { name: 'Leads (Raio-X)', href: '/admin/leads', icon: Target },
-        { name: 'Playbook', href: '/admin/playbook', icon: BookOpen },
+        { name: 'Scripts', href: '/admin/playbook', icon: BookOpen },
       ]
     },
     {
