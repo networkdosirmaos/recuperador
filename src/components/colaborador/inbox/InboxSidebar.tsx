@@ -16,13 +16,14 @@ interface InboxSidebarProps {
   onSaveNote: (leadId: string, notes: string) => Promise<void>;
   affiliateLink?: string;
   salesLink?: string;
+  collaboratorName?: string;
   viewerRole?: 'admin' | 'collaborator';
   canSeeEmail?: boolean;
   onRemoveFromQueue?: () => void;
   onDeleteLead?: () => void;
 }
 
-export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, onSaveNote, affiliateLink, salesLink, viewerRole = 'collaborator', canSeeEmail = true, onRemoveFromQueue, onDeleteLead }: InboxSidebarProps) {
+export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, onSaveNote, affiliateLink, salesLink, collaboratorName, viewerRole = 'collaborator', canSeeEmail = true, onRemoveFromQueue, onDeleteLead }: InboxSidebarProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [noteText, setNoteText] = useState('')
   const [status, setStatus] = useState('em_atendimento')
@@ -97,6 +98,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
     parsed = parsed.replace(/{PRODUTO}/g, lead.product_name || '')
     parsed = parsed.replace(/{LINK_CHECKOUT}/g, affiliateLink || '')
     parsed = parsed.replace(/{LINK_VENDAS}/g, salesLink || '')
+    parsed = parsed.replace(/{COLABORADOR}/g, collaboratorName?.split(' ')[0] || '')
     return parsed
   }
 

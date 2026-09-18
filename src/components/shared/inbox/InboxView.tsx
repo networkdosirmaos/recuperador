@@ -271,6 +271,7 @@ export function InboxView({ targetUserId, viewerRole, viewerId }: InboxViewProps
           onSaveNote={handleSaveNote}
           affiliateLink={viewerRole === 'collaborator' ? profile?.affiliate_link : undefined}
           salesLink={viewerRole === 'collaborator' ? profile?.sales_link : undefined}
+          collaboratorName={profile?.full_name}
           viewerRole={viewerRole}
           canSeeEmail={profile?.can_see_email ?? true}
           onRemoveFromQueue={viewerRole === 'admin' ? () => removeFromQueueMutation.mutate(selectedLeadId!) : undefined}

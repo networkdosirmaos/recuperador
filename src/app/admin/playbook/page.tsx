@@ -291,6 +291,7 @@ export default function PlaybookPage() {
                   {[
                     { tag: '{NOME}', desc: 'Primeiro nome do cliente' },
                     { tag: '{PRODUTO}', desc: 'Nome do produto na Cakto' },
+                    { tag: '{COLABORADOR}', desc: 'Primeiro nome do vendedor logado' },
                     { tag: '{LINK_CHECKOUT}', desc: 'Link de afiliado do vendedor' },
                     { tag: '{LINK_VENDAS}', desc: 'Link da página de vendas' },
                   ].map(v => (
