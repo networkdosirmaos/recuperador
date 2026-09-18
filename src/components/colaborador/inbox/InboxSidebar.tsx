@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react'
-import { X, Calendar, MessageCircle, AlertCircle, Clock, Building, DollarSign, QrCode, Phone, Activity, CreditCard, ShoppingCart, CheckCircle2, Copy, Package, ChevronRight, ChevronDown } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { X, Calendar, MessageCircle, AlertCircle, Clock, Building, DollarSign, QrCode, Phone, Activity, CreditCard, ShoppingCart, CheckCircle2, Copy, Package, ChevronRight, ChevronDown, Send } from 'lucide-react'
 import type { LeadRow } from '@/types/database.types'
-import { formatDistanceToNow, addDays, setHours, setMinutes } from 'date-fns'
+import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import toast from 'react-hot-toast'
 import { useQuery } from '@tanstack/react-query'
@@ -26,12 +26,11 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
   const [isUpdating, setIsUpdating] = useState(false)
   const [noteText, setNoteText] = useState('')
   const [status, setStatus] = useState('em_atendimento')
-  const [nextStep, setNextStep] = useState<'agendar' | 'finalizar'>('finalizar')
   const [scheduleDate, setScheduleDate] = useState('')
+  const scrollRef = useRef<HTMLDivElement>(null)
   
   // Accordions state
   const [showDataLinks, setShowDataLinks] = useState(false)
-  const [showHistory, setShowHistory] = useState(false)
 
   const { data: recommendedScripts = [] } = useQuery({
     queryKey: ['recommended_scripts', lead?.id, lead?.gateway_status, lead?.gateway_event],
@@ -42,7 +41,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
     enabled: !!lead && (!!lead.gateway_status || !!lead.gateway_event)
   })
 
-  const { data: dbEvents = [], isLoading: isLoadingEvents } = useQuery({
+  const { data: dbEvents = [], isLoading: isLoadingEvents, refetch: refetchEvents } = useQuery({
     queryKey: ['lead_events', lead?.id],
     queryFn: async () => {
       if (!lead?.id) return []
@@ -63,18 +62,13 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
       setNoteText('')
       setStatus(lead.status || 'em_atendimento')
       setShowDataLinks(false)
-      setShowHistory(false)
       
-      // Auto-set nextStep based on existing schedule
+      // Setup schedule date
       if (lead.next_action_at) {
-        setNextStep('agendar')
-        // Format to YYYY-MM-DDThh:mm
         const d = new Date(lead.next_action_at)
-        // Adjust for local timezone
         d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
         setScheduleDate(d.toISOString().slice(0, 16))
       } else {
-        setNextStep('finalizar')
         setScheduleDate('')
       }
     }
@@ -116,27 +110,43 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
     window.open(url, '_blank')
   }
 
-  const handleSaveForm = async () => {
+  const handleStatusChange = async (newStatus: string) => {
+    setStatus(newStatus)
+    try {
+      await onUpdateStatus(lead.id!, newStatus)
+      toast.success('Status atualizado')
+      refetchEvents()
+    } catch (err) {
+      toast.error('Erro ao atualizar status')
+    }
+  }
+
+  const handleScheduleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const date = e.target.value
+    setScheduleDate(date)
+    try {
+      if (date) {
+        await onScheduleAction(lead.id!, new Date(date).toISOString())
+        toast.success('Retorno agendado')
+      } else {
+        await onScheduleAction(lead.id!, null)
+        toast.success('Agendamento removido')
+      }
+      refetchEvents()
+    } catch (err) {
+      toast.error('Erro ao agendar retorno')
+    }
+  }
+
+  const handleSendNote = async () => {
+    if (!noteText.trim()) return
     setIsUpdating(true)
     try {
-      if (noteText.trim()) {
-        await onSaveNote(lead.id!, noteText)
-      }
-      
-      if (status !== lead.status) {
-        await onUpdateStatus(lead.id!, status)
-      }
-
-      if (nextStep === 'agendar' && scheduleDate) {
-        await onScheduleAction(lead.id!, new Date(scheduleDate).toISOString())
-      } else if (nextStep === 'finalizar' && lead.next_action_at) {
-        await onScheduleAction(lead.id!, null) // Limpa agendamento se escolheu finalizar
-      }
-
-      toast.success('Atendimento salvo com sucesso!')
-      onClose() // Fecha sidebar após salvar o fluxo completo
+      await onSaveNote(lead.id!, noteText)
+      setNoteText('')
+      refetchEvents() // Recarrega os eventos para ver o comentário instantaneamente
     } catch (err) {
-      toast.error('Erro ao salvar o atendimento.')
+      toast.error('Erro ao enviar comentário')
     } finally {
       setIsUpdating(false)
     }
@@ -153,13 +163,11 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
     return event.replace('_', ' ')
   }
 
-  // Pegar a última anotação humana
-  const lastHumanNote = combinedEvents.find(e => e.gateway_event === 'HUMAN_NOTE' || e.gateway_status === 'HUMAN_NOTE')
-
   return (
     <div className="fixed inset-y-0 right-0 w-full md:w-[450px] bg-white border-l border-gray-200 shadow-2xl flex flex-col z-50 transform transition-transform duration-300 ease-in-out translate-x-0">
-      {/* HEADER */}
-      <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between bg-white shrink-0">
+      
+      {/* HEADER FIXO */}
+      <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between bg-white shrink-0 z-10">
         <div className="flex-1">
           <h2 className="text-[20px] font-bold text-gray-900 leading-tight mb-1">{lead.name}</h2>
           <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -190,146 +198,73 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8 bg-[#f9fafb]">
-        
-        {/* BLOCO 1: ÚLTIMO CONTATO */}
-        {(lastHumanNote || lead.next_action_at) && (
-          <div>
-            <h3 className="text-[13px] font-bold text-gray-900 mb-3">Último contato</h3>
-            <div className="space-y-2.5 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-              {lastHumanNote && (
-                <div className="flex items-start gap-3 text-[13px] text-gray-700">
-                  <MessageCircle className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
-                  <span className="leading-relaxed">{lastHumanNote.reason}</span>
-                </div>
-              )}
-              {lead.next_action_at && (
-                <div className="flex items-center gap-3 text-[13px] text-gray-700">
-                  <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
-                  <span className="leading-relaxed">Retorno combinado: {new Date(lead.next_action_at).toLocaleString('pt-BR', { timeStyle: 'short', dateStyle: 'short' })}</span>
-                </div>
-              )}
+      {/* ÁREA DE SCROLL (CONTEÚDO) */}
+      <div className="flex-1 overflow-y-auto bg-[#f9fafb] flex flex-col" ref={scrollRef}>
+        <div className="p-6 space-y-6 flex-1">
+          
+          {/* AÇÕES RÁPIDAS */}
+          <div className="flex gap-3 bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex-1 min-w-0">
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Status do Lead</label>
+              <select 
+                value={status}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-50 hover:bg-gray-100 cursor-pointer border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-700 text-[13px] font-bold appearance-none transition-colors"
+                style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")', backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
+              >
+                <option value="novo">Novo</option>
+                <option value="em_atendimento">Em andamento</option>
+                <option value="recuperado">Recuperado (Ganho)</option>
+                <option value="perdido">Perdido</option>
+              </select>
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Agendar Retorno</label>
+              <div className="relative">
+                <input
+                  type="datetime-local"
+                  value={scheduleDate}
+                  onChange={handleScheduleChange}
+                  className="w-full pl-9 pr-3 py-2 bg-gray-50 hover:bg-gray-100 cursor-pointer border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-gray-700 text-[13px] font-bold transition-colors"
+                />
+                <Calendar className="w-4 h-4 text-gray-400 absolute left-3 top-2.5 pointer-events-none" />
+              </div>
             </div>
           </div>
-        )}
 
-        {/* BLOCO 2: SCRIPT SUGERIDO */}
-        {recommendedScripts.length > 0 && (
-          <div>
-            <h3 className="text-[13px] font-bold text-gray-900 mb-1">Script sugerido</h3>
-            <p className="text-[12px] text-gray-500 mb-3">{recommendedScripts[0].title}</p>
-            
-            <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-4 shadow-sm relative">
-              <p className="text-[14px] text-indigo-900 whitespace-pre-wrap leading-relaxed mb-4">
-                {parseScriptVariables(recommendedScripts[0].content)}
-              </p>
+          {/* SCRIPT SUGERIDO */}
+          {recommendedScripts.length > 0 && (
+            <div>
+              <h3 className="text-[13px] font-bold text-gray-900 mb-2">Script Sugerido</h3>
+              <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-4 shadow-sm relative">
+                <p className="text-[14px] text-indigo-900 whitespace-pre-wrap leading-relaxed mb-4">
+                  {parseScriptVariables(recommendedScripts[0].content)}
+                </p>
+                <button 
+                  onClick={() => handleCopyScript(recommendedScripts[0].content)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg transition-colors"
+                >
+                  <Copy className="w-3.5 h-3.5" /> Copiar
+                </button>
+              </div>
               <button 
-                onClick={() => handleCopyScript(recommendedScripts[0].content)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg transition-colors"
+                onClick={() => handleSendScript(recommendedScripts[0].content)}
+                className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-3 bg-[#10b981] hover:bg-[#059669] text-white font-bold rounded-xl transition-all shadow-sm shadow-green-500/20 text-[14px]"
               >
-                <Copy className="w-3.5 h-3.5" /> Copiar texto
+                <MessageCircle className="w-4 h-4" />
+                Abrir WhatsApp com texto
               </button>
             </div>
-            
-            <button 
-              onClick={() => handleSendScript(recommendedScripts[0].content)}
-              className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-3.5 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl transition-all shadow-sm shadow-green-500/20 text-[15px]"
-            >
-              <MessageCircle className="w-[20px] h-[20px]" />
-              Abrir WhatsApp com este texto
-            </button>
-          </div>
-        )}
+          )}
 
-        {/* BLOCO 3: REGISTRAR ATENDIMENTO */}
-        <div>
-          <h3 className="text-[13px] font-bold text-gray-900 mb-3">Registrar atendimento</h3>
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-4">
-            <textarea
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-              placeholder="O que aconteceu na conversa?"
-              className="w-full bg-transparent border-0 focus:ring-0 outline-none text-gray-700 text-[14px] resize-none min-h-[60px] placeholder-gray-400 p-0"
-            />
-            
-            <div className="h-px bg-gray-100 -mx-4"></div>
-            
-            <div className="flex flex-col md:flex-row gap-4 pt-2">
-              <div className="flex-1 min-w-0">
-                <label className="block text-[11px] font-bold text-gray-700 mb-2">Status</label>
-                <select 
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-700 text-[13px] font-medium appearance-none"
-                  style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E")', backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
-                >
-                  <option value="novo">Novo</option>
-                  <option value="em_atendimento">Aguardando pagamento</option>
-                  <option value="recuperado">Recuperado</option>
-                  <option value="perdido">Perdido</option>
-                </select>
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <label className="block text-[11px] font-bold text-gray-700 mb-2">Próximo passo</label>
-                <div className="flex items-center gap-3 mb-2 whitespace-nowrap">
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="nextStep" 
-                      checked={nextStep === 'agendar'}
-                      onChange={() => setNextStep('agendar')}
-                      className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <span className="text-[13px] text-gray-700">Agendar</span>
-                  </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="nextStep" 
-                      checked={nextStep === 'finalizar'}
-                      onChange={() => setNextStep('finalizar')}
-                      className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <span className="text-[13px] text-gray-700">Finalizar</span>
-                  </label>
-                </div>
-                {nextStep === 'agendar' && (
-                  <div className="relative mt-2">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Calendar className="h-4 w-4 text-gray-400" />
-                    </div>
-                    <input
-                      type="datetime-local"
-                      value={scheduleDate}
-                      onChange={(e) => setScheduleDate(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-700 text-[13px]"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <button 
-              onClick={handleSaveForm}
-              disabled={isUpdating}
-              className="w-full py-3 bg-[#6366f1] hover:bg-[#4f46e5] text-white font-bold rounded-lg transition-colors shadow-sm mt-4 text-[14px] disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {isUpdating ? 'Salvando...' : 'Salvar atendimento'}
-            </button>
-          </div>
-        </div>
-
-        {/* BLOCO 4: ACCORDIONS */}
-        <div className="border-t border-gray-200 pt-6 space-y-3">
-          
-          {/* Accordion: Dados do Produto */}
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          {/* ACCORDION: DADOS E LINKS */}
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
             <button 
               onClick={() => setShowDataLinks(!showDataLinks)}
               className="w-full flex items-center justify-between p-4 bg-white hover:bg-gray-50 transition-colors"
             >
-              <div className="flex items-center gap-2 text-gray-700 font-semibold text-[14px]">
+              <div className="flex items-center gap-2 text-gray-700 font-semibold text-[13px]">
                 <Package className="w-4 h-4 text-gray-400" />
                 Dados e links do produto
               </div>
@@ -384,82 +319,118 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
             )}
           </div>
 
-          {/* Accordion: Histórico */}
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <button 
-              onClick={() => setShowHistory(!showHistory)}
-              className="w-full flex items-center justify-between p-4 bg-white hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center gap-2 text-gray-700 font-semibold text-[14px]">
-                <Clock className="w-4 h-4 text-gray-400" />
-                Histórico · {combinedEvents.length} registros
-              </div>
-              {showHistory ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
-            </button>
-            {showHistory && (
-              <div className="p-4 border-t border-gray-100 bg-gray-50/50">
-                {isLoadingEvents ? (
-                  <div className="text-center py-4 text-gray-500 text-sm">Carregando histórico...</div>
-                ) : (
-                  <div className="relative border-l-2 border-gray-200 ml-3 space-y-5">
-                    {combinedEvents.map((log: any, idx: number) => {
-                      const type = log.gateway_event || log.gateway_status || ''
-                      let Icon = Activity
-                      let iconBg = 'bg-gray-100'
-                      let iconColor = 'text-gray-500'
-                      let titleColor = 'text-gray-900'
+          {/* LINHA DO TEMPO (HISTÓRICO) */}
+          <div className="pt-4">
+            <h3 className="text-[13px] font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Activity className="w-4 h-4 text-gray-400" />
+              Linha do Tempo
+            </h3>
+            
+            {isLoadingEvents ? (
+              <div className="text-center py-4 text-gray-500 text-sm">Carregando histórico...</div>
+            ) : (
+              <div className="relative border-l-2 border-gray-200 ml-3 space-y-5">
+                {combinedEvents.map((log: any, idx: number) => {
+                  const type = log.gateway_event || log.gateway_status || ''
+                  let Icon = Activity
+                  let iconBg = 'bg-gray-100'
+                  let iconColor = 'text-gray-500'
+                  let titleColor = 'text-gray-900'
+                  
+                  let isNote = false
+                  
+                  if (type === 'HUMAN_NOTE') {
+                    Icon = MessageCircle
+                    iconBg = 'bg-indigo-100'
+                    iconColor = 'text-indigo-600'
+                    isNote = true
+                  } else if (type === 'STATUS_CHANGE') {
+                    Icon = Activity
+                    iconBg = 'bg-purple-100'
+                    iconColor = 'text-purple-600'
+                  } else if (type === 'SCHEDULE_CHANGE') {
+                    Icon = Calendar
+                    iconBg = 'bg-blue-100'
+                    iconColor = 'text-blue-600'
+                  } else if (type === 'pix_generated' || type === 'waiting_payment') {
+                    Icon = QrCode
+                    iconBg = 'bg-blue-100'
+                    iconColor = 'text-blue-600'
+                  } else if (type === 'purchase_refused') {
+                    Icon = CreditCard
+                    iconBg = 'bg-red-100'
+                    iconColor = 'text-red-600'
+                  } else if (type === 'checkout_abandoned') {
+                    Icon = ShoppingCart
+                    iconBg = 'bg-orange-100'
+                    iconColor = 'text-orange-600'
+                  } else if (type === 'purchase_approved') {
+                    Icon = CheckCircle2
+                    iconBg = 'bg-green-100'
+                    iconColor = 'text-green-600'
+                  }
 
-                      if (type === 'HUMAN_NOTE') {
-                        Icon = MessageCircle
-                        iconBg = 'bg-purple-100'
-                        iconColor = 'text-purple-600'
-                      } else if (type === 'pix_generated' || type === 'waiting_payment') {
-                        Icon = QrCode
-                        iconBg = 'bg-indigo-100'
-                        iconColor = 'text-indigo-600'
-                      } else if (type === 'purchase_refused') {
-                        Icon = CreditCard
-                        iconBg = 'bg-red-100'
-                        iconColor = 'text-red-600'
-                      } else if (type === 'checkout_abandoned') {
-                        Icon = ShoppingCart
-                        iconBg = 'bg-orange-100'
-                        iconColor = 'text-orange-600'
-                      } else if (type === 'purchase_approved') {
-                        Icon = CheckCircle2
-                        iconBg = 'bg-green-100'
-                        iconColor = 'text-green-600'
-                      }
+                  let titleText = translateEvent(type)
+                  if (type === 'HUMAN_NOTE') titleText = 'Comentário'
+                  if (type === 'STATUS_CHANGE') titleText = 'Status Atualizado'
+                  if (type === 'SCHEDULE_CHANGE') titleText = 'Agendamento'
 
-                      return (
-                        <div key={idx} className="relative pl-5">
-                          <div className={`absolute -left-[13px] top-0.5 w-6 h-6 rounded-full ${iconBg} flex items-center justify-center border-2 border-white`}>
-                            <Icon className={`w-3 h-3 ${iconColor}`} />
-                          </div>
-                          <div className="bg-white border border-gray-100 rounded-lg p-3 shadow-sm">
-                            <div className="flex justify-between items-start mb-1">
-                              <span className={`text-[12px] font-bold ${titleColor} uppercase tracking-wide`}>
-                                {translateEvent(type)}
-                              </span>
-                              <span className="text-[11px] text-gray-400">
-                                {new Date(log.created_at).toLocaleString('pt-BR')}
-                              </span>
-                            </div>
-                            {log.reason && (
-                              <p className="text-[13px] text-gray-600 leading-relaxed">{log.reason}</p>
-                            )}
-                          </div>
+                  return (
+                    <div key={idx} className="relative pl-5">
+                      <div className={`absolute -left-[13px] top-0.5 w-6 h-6 rounded-full ${iconBg} flex items-center justify-center border-2 border-[#f9fafb]`}>
+                        <Icon className={`w-3 h-3 ${iconColor}`} />
+                      </div>
+                      <div className={`bg-white border border-gray-100 rounded-xl p-3 shadow-sm ${isNote ? 'border-indigo-100 bg-indigo-50/30' : ''}`}>
+                        <div className="flex justify-between items-start mb-1">
+                          <span className={`text-[12px] font-bold ${titleColor} uppercase tracking-wide`}>
+                            {titleText}
+                          </span>
+                          <span className="text-[11px] text-gray-400">
+                            {new Date(log.created_at).toLocaleString('pt-BR')}
+                          </span>
                         </div>
-                      )
-                    })}
-                  </div>
-                )}
+                        {log.reason && (
+                          <p className={`text-[13px] leading-relaxed ${isNote ? 'text-gray-800 font-medium' : 'text-gray-600'}`}>{log.reason}</p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
-          
         </div>
       </div>
+
+      {/* ÁREA DE INPUT DE COMENTÁRIO FIXA NO RODAPÉ */}
+      <div className="p-4 bg-white border-t border-gray-200 z-10 shrink-0">
+        <div className="flex items-end gap-2 bg-gray-50 border border-gray-200 rounded-2xl p-1.5 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition-all shadow-sm">
+          <textarea
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSendNote()
+              }
+            }}
+            placeholder="Adicione um comentário..."
+            className="flex-1 bg-transparent border-0 focus:ring-0 outline-none text-gray-700 text-[14px] resize-none max-h-[120px] min-h-[40px] px-3 py-2.5 placeholder-gray-400"
+            rows={1}
+          />
+          <button
+            onClick={handleSendNote}
+            disabled={isUpdating || !noteText.trim()}
+            className="p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors disabled:opacity-50 flex-shrink-0 mb-0.5 mr-0.5 shadow-sm"
+          >
+            {isUpdating ? <Activity className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          </button>
+        </div>
+        <div className="text-[10px] text-gray-400 text-center mt-2 font-medium">
+          Pressione Enter para enviar
+        </div>
+      </div>
+
     </div>
   )
 }
