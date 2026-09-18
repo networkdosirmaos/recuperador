@@ -94,7 +94,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
   const parseScriptVariables = (content: string) => {
     let parsed = content
     parsed = parsed.replace(/{NOME}/g, lead.name?.split(' ')[0] || '')
-    parsed = parsed.replace(/{PRODUO}/g, lead.product_name || '')
+    parsed = parsed.replace(/{PRODUTO}/g, lead.product_name || '')
     parsed = parsed.replace(/{LINK_CHECKOUT}/g, affiliateLink || '')
     parsed = parsed.replace(/{LINK_VENDAS}/g, salesLink || '')
     return parsed
