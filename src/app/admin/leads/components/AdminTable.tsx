@@ -71,11 +71,11 @@ export function AdminTable({
                   />
                 </th>
                 <th className="p-4 whitespace-nowrap">Cliente</th>
-                <th className="p-4 whitespace-nowrap">Produto</th>
+                <th className="p-4 whitespace-nowrap w-[200px] min-w-[200px] max-w-[200px]">Produto</th>
+                {showColumns.gateway_event && <th className="p-4 whitespace-nowrap">Evento</th>}
                 {showColumns.origin && <th className="p-4 whitespace-nowrap">Origem</th>}
                 {showColumns.payment && <th className="p-4 whitespace-nowrap">Pagamento</th>}
                 {showColumns.gateway_status && <th className="p-4 whitespace-nowrap">Status Gateway</th>}
-                {showColumns.gateway_event && <th className="p-4 whitespace-nowrap">Evento</th>}
                 {showColumns.reason && <th className="p-4 whitespace-nowrap">Motivo</th>}
                 {showColumns.gateway_updated_at && <th className="p-4 whitespace-nowrap">Data Gateway</th>}
                 {showColumns.crm_status && <th className="p-4 whitespace-nowrap">Status CRM</th>}
@@ -84,8 +84,17 @@ export function AdminTable({
             </thead>
             <tbody className="divide-y divide-gray-100">
               {leads.map((lead: LeadRow) => (
-                <tr key={lead.id} className={`transition-colors ${selectedLeads.includes(lead.id) ? 'bg-indigo-50/50' : 'hover:bg-gray-50'}`}>
-                  <td className="p-4">
+                <tr 
+                  key={lead.id} 
+                  className={`transition-colors cursor-pointer ${selectedLeads.includes(lead.id) ? 'bg-indigo-50/50' : 'hover:bg-gray-50'}`}
+                  onClick={(e) => {
+                    // Prevent triggering if clicked on checkbox
+                    if ((e.target as HTMLElement).tagName !== 'INPUT') {
+                      onSelectLead(lead)
+                    }
+                  }}
+                >
+                  <td className="p-4" onClick={e => e.stopPropagation()}>
                     <input 
                       type="checkbox" 
                       className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
@@ -94,18 +103,22 @@ export function AdminTable({
                     />
                   </td>
                   <td className="p-4">
-                    <button 
-                      onClick={() => onSelectLead(lead)}
-                      className="text-left group focus:outline-none"
-                    >
-                      <div className="font-semibold text-indigo-600 group-hover:text-indigo-800 transition-colors underline decoration-indigo-200 underline-offset-2">{lead.name}</div>
+                    <div className="text-left group focus:outline-none">
+                      <div className="font-semibold text-indigo-600 group-hover:text-indigo-800 transition-colors">{lead.name}</div>
                       <div className="text-xs text-gray-500 mt-1">{lead.email || lead.phone || 'Sem contato'}</div>
                       <div className="text-[10px] text-gray-400 mt-0.5">{new Date(lead.created_at).toLocaleString('pt-BR')}</div>
-                    </button>
+                    </div>
                   </td>
-                  <td className="p-4">
-                    <div className="text-sm font-medium text-gray-900 max-w-[200px] truncate" title={lead.product_name || 'N/A'}>{lead.product_name || 'N/A'}</div>
+                  <td className="p-4 w-[200px] min-w-[200px] max-w-[200px]">
+                    <div className="text-sm font-medium text-gray-900 truncate" title={lead.product_name || 'N/A'}>{lead.product_name || 'N/A'}</div>
                   </td>
+                  {showColumns.gateway_event && (
+                    <td className="p-4 text-xs text-gray-600 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-gray-100 text-gray-600">
+                        {lead.gateway_event || '-'}
+                      </span>
+                    </td>
+                  )}
                   {showColumns.origin && (
                     <td className="p-4 text-xs text-gray-600 whitespace-nowrap">
                       {lead.lead_lists?.type === 'webhook_cakto' ? '⚡ ' : '📁 '} 
@@ -124,11 +137,6 @@ export function AdminTable({
                   {showColumns.gateway_status && (
                     <td className="p-4 text-xs font-mono text-gray-600 whitespace-nowrap">
                       {lead.gateway_status || '-'}
-                    </td>
-                  )}
-                  {showColumns.gateway_event && (
-                    <td className="p-4 text-xs text-gray-600 whitespace-nowrap">
-                      {lead.gateway_event || '-'}
                     </td>
                   )}
                   {showColumns.reason && (
