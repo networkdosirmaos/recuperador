@@ -14,6 +14,7 @@ const EVENT_OPTIONS = [
   { value: 'purchase_approved', label: 'Compra Aprovada' },
   { value: 'refund_requested', label: 'Reembolso Solicitado' },
   { value: 'chargeback', label: 'Chargeback' },
+  { value: 'venda_ativa', label: '🎯 Vendas Ativas / Prospecção' },
 ]
 
 export default function PlaybookPage() {

@@ -27,15 +27,21 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
   const [noteText, setNoteText] = useState('')
   const [status, setStatus] = useState('em_atendimento')
   const [scheduleDate, setScheduleDate] = useState('')
+  const [activeScriptIndex, setActiveScriptIndex] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
   
+  const isVendaAtiva = !lead?.gateway_event || lead.gateway_event === 'import_base' || lead.gateway_event === 'prospeccao';
+
   const { data: recommendedScripts = [] } = useQuery({
-    queryKey: ['recommended_scripts', lead?.id, lead?.gateway_status, lead?.gateway_event],
+    queryKey: ['recommended_scripts', lead?.id, lead?.gateway_status, lead?.gateway_event, isVendaAtiva],
     queryFn: () => {
-      const types = [lead?.gateway_status, lead?.gateway_event].filter(Boolean) as string[]
+      let types = [lead?.gateway_status, lead?.gateway_event].filter(Boolean) as string[];
+      if (types.length === 0 || isVendaAtiva) {
+        types = ['venda_ativa'];
+      }
       return scriptService.getRecommendedScripts(types, lead?.refund_reason)
     },
-    enabled: !!lead && (!!lead.gateway_status || !!lead.gateway_event)
+    enabled: !!lead
   })
 
   const { data: dbEvents = [], isLoading: isLoadingEvents, refetch: refetchEvents } = useQuery({
@@ -58,6 +64,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
     if (lead) {
       setNoteText('')
       setStatus(lead.status || 'em_atendimento')
+      setActiveScriptIndex(0)
       
       // Setup schedule date
       if (lead.next_action_at) {
@@ -269,44 +276,75 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
 
           {/* FASE 3: PROBLEMA E SOLUÇÃO (Evento + Script) */}
           <div>
-            <div className={`mb-3 px-4 py-3 rounded-xl border shadow-sm ${getEventBannerStyles(lead.gateway_event)}`}>
-              <div className="flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 shrink-0" />
+            {isVendaAtiva ? (
+              <div className="mb-3 px-4 py-3 rounded-xl border flex items-center gap-3 shadow-sm bg-indigo-50 border-indigo-200 text-indigo-700">
+                <Activity className="w-5 h-5 shrink-0" />
                 <span className="text-[13px] font-bold uppercase tracking-wide">
-                  Motivo: {translateEvent(lead.gateway_event)}
+                  🎯 FOCO: ABORDAGEM DE VENDAS
                 </span>
               </div>
-              
-              {/* Informações detalhadas de reembolso se existirem */}
-              {(lead.refund_reason || lead.refunded_at) && (
-                <div className="pl-8 mt-2 space-y-1">
-                  {lead.refund_reason && (
-                    <p className="text-[13px] font-medium opacity-90">
-                      <strong>Causa:</strong> {lead.refund_reason}
-                    </p>
-                  )}
-                  {lead.refunded_at && (
-                    <p className="text-[11px] opacity-75">
-                      Data do Reembolso: {new Date(lead.refunded_at).toLocaleString('pt-BR')}
-                    </p>
-                  )}
+            ) : (
+              <div className={`mb-3 px-4 py-3 rounded-xl border shadow-sm ${getEventBannerStyles(lead.gateway_event)}`}>
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <span className="text-[13px] font-bold uppercase tracking-wide">
+                    Motivo: {translateEvent(lead.gateway_event)}
+                  </span>
                 </div>
-              )}
-            </div>
+                
+                {/* Informações detalhadas de reembolso se existirem */}
+                {(lead.refund_reason || lead.refunded_at) && (
+                  <div className="pl-8 mt-2 space-y-1">
+                    {lead.refund_reason && (
+                      <p className="text-[13px] font-medium opacity-90">
+                        <strong>Causa:</strong> {lead.refund_reason}
+                      </p>
+                    )}
+                    {lead.refunded_at && (
+                      <p className="text-[11px] opacity-75">
+                        Data do Reembolso: {new Date(lead.refunded_at).toLocaleString('pt-BR')}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {recommendedScripts.length > 0 && (
               <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-4 shadow-sm relative">
+                
+                {/* FASE 4: MÚLTIPLAS ABORDAGENS (Abas) */}
+                {recommendedScripts.length > 1 && (
+                  <div className="flex gap-2 mb-3 overflow-x-auto pb-1 scrollbar-hide">
+                    {recommendedScripts.map((script: any, idx: number) => (
+                      <button
+                        key={idx}
+                        onClick={() => setActiveScriptIndex(idx)}
+                        className={`px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-colors ${
+                          activeScriptIndex === idx 
+                            ? 'bg-indigo-600 text-white shadow-sm' 
+                            : 'bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-50'
+                        }`}
+                      >
+                        {script.title || `Opção ${idx + 1}`}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-[11px] font-bold text-indigo-900/60 uppercase tracking-wider">Script Sugerido</h3>
-                  <button onClick={() => handleCopyScript(recommendedScripts[0].content)} className="flex items-center gap-1.5 px-2 py-1 bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 text-[11px] font-bold rounded transition-colors">
+                  <h3 className="text-[11px] font-bold text-indigo-900/60 uppercase tracking-wider">
+                    {isVendaAtiva ? 'Script de Vendas Sugerido' : 'Script Sugerido'}
+                  </h3>
+                  <button onClick={() => handleCopyScript(recommendedScripts[activeScriptIndex].content)} className="flex items-center gap-1.5 px-2 py-1 bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 text-[11px] font-bold rounded transition-colors">
                     <Copy className="w-3 h-3" /> Copiar
                   </button>
                 </div>
                 <p className="text-[14px] text-indigo-900 whitespace-pre-wrap leading-relaxed mb-4">
-                  {parseScriptVariables(recommendedScripts[0].content)}
+                  {parseScriptVariables(recommendedScripts[activeScriptIndex].content)}
                 </p>
                 <button 
-                  onClick={() => handleSendScript(recommendedScripts[0].content)}
+                  onClick={() => handleSendScript(recommendedScripts[activeScriptIndex].content)}
                   className="w-full mt-1 flex items-center justify-center gap-2 px-4 py-3 bg-[#10b981] hover:bg-[#059669] text-white font-bold rounded-xl transition-all shadow-sm shadow-green-500/20 text-[14px]"
                 >
                   <MessageCircle className="w-4 h-4" />
