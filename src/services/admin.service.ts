@@ -26,7 +26,7 @@ export const adminService = {
       product: l.product_name || 'N/A', 
       event: l.gateway_event || '-',
       status: l.status,
-      assigned_to: l.profiles ? (l.profiles as { full_name: string }).full_name : null,
+      assigned_to: l.profiles ? (l.profiles as any).full_name || (l.profiles as any)[0]?.full_name : null,
       updated_at: l.updated_at
     }));
 

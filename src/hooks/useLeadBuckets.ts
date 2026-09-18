@@ -23,9 +23,9 @@ export function useLeadBuckets(myLeads: MyLead[], selectedTab: 'pendentes' | 'em
     
     const isCoolingDown = (l: MyLead) => {
       const isPixEvent = l.gateway_event === 'pix_generated' || l.gateway_event === 'pix_gerado' || l.gateway_event === 'waiting_payment';
-      return isPixEvent && l.status === 'novo' && (nowTick - new Date(l.updated_at || l.created_at).getTime() < 6 * 60 * 1000);
+      return isPixEvent && l.status === 'novo' && (nowTick - new Date((l.updated_at || l.created_at) as string).getTime() < 6 * 60 * 1000);
     }
-    const isPastDue = (l: MyLead) => l.next_action_at && new Date(l.next_action_at).getTime() <= nowTick
+    const isPastDue = (l: MyLead) => l.next_action_at && new Date(l.next_action_at as string).getTime() <= nowTick
 
     const getBucket = (l: MyLead) => {
       if (isOrganic(l)) return 'ignorar'
