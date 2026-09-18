@@ -427,7 +427,11 @@ function BaseDeLeadsContent() {
                     )}
                     {showColumns.reason && (
                       <td className="p-4 text-xs text-red-600">
-                        {lead.reason ? <span title={lead.reason}>{lead.reason.substring(0, 30)}...</span> : '-'}
+                        {lead.refund_reason ? (
+                          <span title={lead.refund_reason} className="text-orange-600 font-medium">Reembolso: {lead.refund_reason.substring(0, 30)}...</span>
+                        ) : lead.reason ? (
+                          <span title={lead.reason}>{lead.reason.substring(0, 30)}...</span>
+                        ) : '-'}
                       </td>
                     )}
                     {showColumns.gateway_updated_at && (

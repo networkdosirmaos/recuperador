@@ -44,16 +44,18 @@ export const coreLeadService = {
       leadData.customer_id = payload.customerId
       leadData.product_name = payload.produto !== 'Produto Não Informado' ? payload.produto : undefined
       leadData.gateway = payload.gateway
-      leadData.refunded_at = payload.refundedAt
-      leadData.chargedback_at = payload.chargedbackAt
-      leadData.refund_reason = payload.refundReason
       leadData.payment_method = payload.paymentMethod
       leadData.list_id = payload.listId
       if (!leadData.status) leadData.status = 'novo'
-      if (payload.isPing) leadData.name = '🛠️ TESTE (Webhook)'
+      if (payload.isPing) leadData.name = '✅ TESTE (Webhook)'
     } else {
       if (payload.produto && payload.produto !== 'Produto Não Informado') leadData.product_name = payload.produto
     }
+
+    // Sempre atualiza dados de reembolso/chargeback se vierem no payload
+    if (payload.refundedAt) leadData.refunded_at = payload.refundedAt
+    if (payload.chargedbackAt) leadData.chargedback_at = payload.chargedbackAt
+    if (payload.refundReason) leadData.refund_reason = payload.refundReason
 
     // 4. Salva no banco
     const finalLeadId = await LeadRepository.upsertLead(existingLead ? existingLead.id : null, leadData)

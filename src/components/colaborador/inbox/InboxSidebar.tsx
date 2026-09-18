@@ -269,11 +269,29 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
 
           {/* FASE 3: PROBLEMA E SOLUÇÃO (Evento + Script) */}
           <div>
-            <div className={`mb-3 px-4 py-3 rounded-xl border flex items-center gap-3 shadow-sm ${getEventBannerStyles(lead.gateway_event)}`}>
-              <AlertCircle className="w-5 h-5 shrink-0" />
-              <span className="text-[13px] font-bold uppercase tracking-wide">
-                Motivo: {translateEvent(lead.gateway_event)}
-              </span>
+            <div className={`mb-3 px-4 py-3 rounded-xl border shadow-sm ${getEventBannerStyles(lead.gateway_event)}`}>
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 shrink-0" />
+                <span className="text-[13px] font-bold uppercase tracking-wide">
+                  Motivo: {translateEvent(lead.gateway_event)}
+                </span>
+              </div>
+              
+              {/* Informações detalhadas de reembolso se existirem */}
+              {(lead.refund_reason || lead.refunded_at) && (
+                <div className="pl-8 mt-2 space-y-1">
+                  {lead.refund_reason && (
+                    <p className="text-[13px] font-medium opacity-90">
+                      <strong>Causa:</strong> {lead.refund_reason}
+                    </p>
+                  )}
+                  {lead.refunded_at && (
+                    <p className="text-[11px] opacity-75">
+                      Data do Reembolso: {new Date(lead.refunded_at).toLocaleString('pt-BR')}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {recommendedScripts.length > 0 && (
