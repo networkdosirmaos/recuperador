@@ -36,6 +36,8 @@ export function InboxLeadCard({ lead, isSelected, onClick }: InboxLeadCardProps)
     return event.replace('_', ' ')
   }
 
+  const isNovo = lead.status === 'novo'
+
   return (
     <div 
       onClick={onClick}
