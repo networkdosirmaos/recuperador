@@ -8,10 +8,9 @@ import { BookOpen, Plus, Search, Edit2, Trash2, X, Tag } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const EVENT_OPTIONS = [
-  { value: 'waiting_payment', label: 'Boleto/Pix Gerado' },
   { value: 'checkout_abandoned', label: 'Carrinho Abandonado' },
+  { value: 'waiting_payment', label: 'Boleto/Pix Gerado' },
   { value: 'purchase_refused', label: 'Compra Recusada' },
-  { value: 'purchase_approved', label: 'Compra Aprovada' },
   { value: 'refund_requested', label: 'Reembolso Solicitado' },
   { value: 'chargeback', label: 'Chargeback' },
   { value: 'venda_ativa', label: '🎯 Vendas Ativas / Prospecção' },
@@ -20,7 +19,7 @@ const EVENT_OPTIONS = [
 export default function PlaybookPage() {
   const queryClient = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
-  const [activeEventTab, setActiveEventTab] = useState<string>('waiting_payment')
+  const [activeEventTab, setActiveEventTab] = useState<string>('checkout_abandoned')
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -28,7 +27,7 @@ export default function PlaybookPage() {
   
   // Form State
   const [formData, setFormData] = useState<CreateActionScriptDTO>({
-    event_type: 'waiting_payment',
+    event_type: 'checkout_abandoned',
     title: '',
     content: '',
     sub_condition: ''
