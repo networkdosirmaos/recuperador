@@ -1,24 +1,34 @@
 import { supabase } from '@/lib/supabase'
 
 export const adminService = {
-  async getDashboardMetrics() {
+  async getDashboardMetrics(hideOrganicSales: boolean = true) {
+    const filterCondition = 'gateway_event.neq.purchase_approved,gateway_event.is.null';
+
+    let totalQ = supabase.from('leads').select('*', { count: 'exact', head: true });
+    let pendingQ = supabase.from('leads').select('*', { count: 'exact', head: true }).eq('status', 'novo');
+    let inProgressQ = supabase.from('leads').select('*', { count: 'exact', head: true }).in('status', ['em_atendimento', 'boleto_gerado', 'pix_gerado']);
+    let recoveredQ = supabase.from('leads').select('*', { count: 'exact', head: true }).eq('status', 'recuperado');
+    let recentQ = supabase.from('leads')
+      .select('id, name, status, updated_at, product_name, gateway_event, profiles (full_name)')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (hideOrganicSales) {
+      totalQ = totalQ.or(filterCondition);
+      pendingQ = pendingQ.or(filterCondition);
+      inProgressQ = inProgressQ.or(filterCondition);
+      recoveredQ = recoveredQ.or(filterCondition);
+      recentQ = recentQ.or(filterCondition);
+    }
+
     const [
       { count: total },
       { count: pending },
       { count: inProgress },
       { count: recovered }
-    ] = await Promise.all([
-      supabase.from('leads').select('*', { count: 'exact', head: true }),
-      supabase.from('leads').select('*', { count: 'exact', head: true }).eq('status', 'novo'),
-      supabase.from('leads').select('*', { count: 'exact', head: true }).in('status', ['em_atendimento', 'boleto_gerado', 'pix_gerado']),
-      supabase.from('leads').select('*', { count: 'exact', head: true }).eq('status', 'recuperado')
-    ]);
+    ] = await Promise.all([totalQ, pendingQ, inProgressQ, recoveredQ]);
 
-    const { data: leads } = await supabase
-      .from('leads')
-      .select('id, name, status, updated_at, product_name, gateway_event, profiles (full_name)')
-      .order('created_at', { ascending: false })
-      .limit(10);
+    const { data: leads } = await recentQ;
 
     const formattedLeads = (leads || []).map(l => ({
       id: l.id,
@@ -51,7 +61,7 @@ export const adminService = {
     return data || []
   },
 
-  async searchLeads({ listId, status, searchTerm }: { listId: string, status: string, searchTerm: string }) {
+  async searchLeads({ listId, status, searchTerm, hideOrganicSales = true }: { listId: string, status: string, searchTerm: string, hideOrganicSales?: boolean }) {
     let query = supabase
       .from('leads')
       .select(`
@@ -59,6 +69,10 @@ export const adminService = {
         profiles (full_name),
         lead_lists (name, type)
       `)
+
+    if (hideOrganicSales) {
+      query = query.or('gateway_event.neq.purchase_approved,gateway_event.is.null')
+    }
 
     if (listId !== 'all') {
       query = query.eq('list_id', listId)

@@ -1,15 +1,18 @@
 "use client"
 
-import { Users, Clock, Headset, CheckCircle } from 'lucide-react'
+import { useState } from 'react'
+import { Users, Clock, Headset, CheckCircle, Filter } from 'lucide-react'
 import { KpiCard } from '@/components/KpiCard'
 import { RecentLeadsTable } from '@/components/RecentLeadsTable'
 import { useQuery } from '@tanstack/react-query'
 import { adminService } from '@/services/admin.service'
 
 export default function AdminDashboard() {
+  const [hideOrganicSales, setHideOrganicSales] = useState(true)
+
   const { data, isLoading } = useQuery({
-    queryKey: ['admin_dashboard_metrics'],
-    queryFn: () => adminService.getDashboardMetrics(),
+    queryKey: ['admin_dashboard_metrics', hideOrganicSales],
+    queryFn: () => adminService.getDashboardMetrics(hideOrganicSales),
     refetchInterval: 30000 // Refetch a cada 30 segundos
   })
 
@@ -26,9 +29,24 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Visão Geral</h1>
-        <p className="text-gray-500 mt-1">Acompanhe os resultados da sua equipe em tempo real.</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Visão Geral</h1>
+          <p className="text-gray-500 mt-1">Acompanhe os resultados da sua equipe em tempo real.</p>
+        </div>
+        
+        <label className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm cursor-pointer hover:bg-gray-50 transition-colors">
+          <input 
+            type="checkbox" 
+            checked={hideOrganicSales}
+            onChange={(e) => setHideOrganicSales(e.target.checked)}
+            className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+          />
+          <span className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+            <Filter className="w-4 h-4 text-indigo-600" />
+            Ocultar Vendas Orgânicas
+          </span>
+        </label>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
