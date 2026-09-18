@@ -13,13 +13,12 @@ export const scriptService = {
     return data as ActionScript[]
   },
 
-  async getRecommendedScripts(eventType: string, refundReason?: string | null) {
-    let query = supabase
+  async getRecommendedScripts(eventTypes: string[], refundReason?: string | null) {
+    // Busca scripts onde event_type está na lista fornecida
+    const { data, error } = await supabase
       .from('action_scripts')
       .select('*')
-      .eq('event_type', eventType)
-
-    const { data, error } = await query
+      .in('event_type', eventTypes)
 
     if (error) throw error
     

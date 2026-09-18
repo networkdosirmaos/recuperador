@@ -2,20 +2,45 @@ import { useEffect, useRef, useState } from 'react'
 import confetti from 'canvas-confetti'
 import toast from 'react-hot-toast'
 
-export function useLeadGamification(novosCount: number) {
+export function useLeadGamification(novosCount: number, recuperadosCount: number) {
   const previousNovosCount = useRef<number | null>(null)
+  const previousRecuperadosCount = useRef<number | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
 
   useEffect(() => {
-    // Evita tocar o som no carregamento inicial da página
-    if (previousNovosCount.current === null) {
-      previousNovosCount.current = novosCount
-      return
+    // Inicialização
+    if (previousNovosCount.current === null) previousNovosCount.current = novosCount
+    if (previousRecuperadosCount.current === null) previousRecuperadosCount.current = recuperadosCount
+
+    // 1. Lógica de Novo Lead na Fila
+    if (previousNovosCount.current !== null && novosCount > previousNovosCount.current) {
+      toast.success("🔥 Novo Lead na Mesa! Quebre tudo!", {
+        duration: 4000,
+        position: 'top-right',
+        style: {
+          background: '#1a1d23',
+          color: '#fff',
+          fontWeight: 'bold',
+          border: '1px solid #7c3aed'
+        },
+        iconTheme: {
+          primary: '#7c3aed',
+          secondary: '#fff',
+        },
+      })
+
+      try {
+        const audio = new Audio('/sounds/notification.mp3')
+        audio.volume = 0.7
+        audio.play().catch(() => {})
+      } catch (error) {}
+
+      setIsAnimating(true)
+      setTimeout(() => setIsAnimating(false), 3000)
     }
 
-    // Se o número de leads 'novos' aumentar
-    if (novosCount > previousNovosCount.current) {
-      // 1. Explosão Visual de Confetes
+    // 2. Lógica de Venda Recuperada (CONFETES)
+    if (previousRecuperadosCount.current !== null && recuperadosCount > previousRecuperadosCount.current) {
       const duration = 2000
       const end = Date.now() + duration
 
@@ -41,42 +66,34 @@ export function useLeadGamification(novosCount: number) {
       }
       frame()
 
-      // 2. Alerta de Urgência (Toast)
-      toast.success("🔥 Novo Lead na Mesa! Quebre tudo!", {
-        duration: 4000,
-        position: 'top-right',
+      toast.success("🤑 VENDA RECUPERADA! Você é gigante!", {
+        duration: 5000,
+        position: 'top-center',
         style: {
-          background: '#1a1d23',
+          background: '#10b981',
           color: '#fff',
           fontWeight: 'bold',
-          border: '1px solid #7c3aed'
+          fontSize: '1.2rem',
+          border: '2px solid #059669'
         },
         iconTheme: {
-          primary: '#7c3aed',
-          secondary: '#fff',
+          primary: '#fff',
+          secondary: '#10b981',
         },
       })
-
-      // 3. Efeito Sonoro
+      
       try {
-        const audio = new Audio('/sounds/notification.mp3')
-        audio.volume = 0.7
-        audio.play().catch((err) => {
-          console.warn("Autoplay bloqueado pelo navegador. O usuário precisa interagir com a tela antes.", err)
-        })
-      } catch (error) {
-        console.error("Erro ao tocar áudio de notificação:", error)
-      }
-
-      // 4. Sinalizador para animar o Card
-      setIsAnimating(true)
-      setTimeout(() => setIsAnimating(false), 3000) // Duração do "Pulse" do KPI
+        const audio = new Audio('/sounds/notification.mp3') // Pode colocar um som de "dinheiro" (cash_register.mp3) futuramente
+        audio.volume = 1.0
+        audio.play().catch(() => {})
+      } catch (error) {}
     }
 
     // Atualiza a memória
     previousNovosCount.current = novosCount
+    previousRecuperadosCount.current = recuperadosCount
 
-  }, [novosCount])
+  }, [novosCount, recuperadosCount])
 
   return { isAnimating }
 } 

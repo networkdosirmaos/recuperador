@@ -63,7 +63,7 @@ export function InboxView({ targetUserId, viewerRole, viewerId }: InboxViewProps
   const { filteredLeads, groupedLeads, counts } = useLeadBuckets(myLeads, selectedTab)
 
   // Motor de Gamificação
-  const { isAnimating } = useLeadGamification(counts.pendentes)
+  const { isAnimating } = useLeadGamification(counts.pendentes, counts.finalizados)
 
   // Mutations (using viewerId for history_log author tracking)
   const updateStatusMutation = useMutation({

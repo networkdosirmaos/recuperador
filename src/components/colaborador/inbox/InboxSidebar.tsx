@@ -29,9 +29,12 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
   const [showScripts, setShowScripts] = useState(true)
 
   const { data: recommendedScripts = [] } = useQuery({
-    queryKey: ['recommended_scripts', lead?.id, lead?.gateway_status],
-    queryFn: () => scriptService.getRecommendedScripts(lead?.gateway_status || '', lead?.refund_reason),
-    enabled: !!lead && !!lead.gateway_status
+    queryKey: ['recommended_scripts', lead?.id, lead?.gateway_status, lead?.gateway_event],
+    queryFn: () => {
+      const types = [lead?.gateway_status, lead?.gateway_event].filter(Boolean) as string[]
+      return scriptService.getRecommendedScripts(types, lead?.refund_reason)
+    },
+    enabled: !!lead && (!!lead.gateway_status || !!lead.gateway_event)
   })
 
   const { data: dbEvents = [], isLoading: isLoadingEvents } = useQuery({
