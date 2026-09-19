@@ -95,13 +95,7 @@ export function InboxLeadCard({ lead, isSelected, onClick }: InboxLeadCardProps)
         )}
         <div className="flex items-center gap-2 text-gray-500">
           <Clock className="w-4 h-4 flex-shrink-0" />
-          {(() => {
-            const lastHistoryDate = Array.isArray(lead.history_log) && lead.history_log.length > 0
-              ? lead.history_log.reduce((latest: any, log: any) => new Date(log.created_at) > new Date(latest.created_at) ? log : latest, lead.history_log[0])?.created_at
-              : null;
-            const finalDate = lastHistoryDate || lead.gateway_updated_at || lead.updated_at || lead.created_at;
-            return <span>Último evento há {getTimeAgo(finalDate)}</span>;
-          })()}
+          <span>Último evento há {getTimeAgo(lead.gateway_updated_at || lead.updated_at || lead.created_at)}</span>
         </div>
       </div>
 
