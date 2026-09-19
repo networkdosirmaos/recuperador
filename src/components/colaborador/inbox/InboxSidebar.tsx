@@ -198,7 +198,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
           </div>
           <div className="flex items-center gap-1.5 text-[12px] text-gray-500 font-medium" title="Data do último evento no sistema ou gateway">
             <Clock className="w-3.5 h-3.5" />
-            <span>Último evento há {formatDistanceToNow(new Date(lead.gateway_updated_at || lead.updated_at || lead.created_at || new Date()), { locale: ptBR })}</span>
+            <span>Último evento há {formatDistanceToNow(new Date(combinedEvents[0]?.created_at || lead.gateway_updated_at || lead.updated_at || lead.created_at || new Date()), { locale: ptBR })}</span>
           </div>
         </div>
         <button 
