@@ -456,8 +456,8 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
                           <span className={`text-[12px] font-bold ${titleColor} uppercase tracking-wide`}>
                             {titleText}
                           </span>
-                          <span className="text-[11px] text-gray-400">
-                            {new Date(log.created_at).toLocaleString('pt-BR')}
+                          <span className="text-[11px] font-medium text-gray-500 first-letter:uppercase">
+                            {formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR })}
                           </span>
                         </div>
                         {log.reason && (
