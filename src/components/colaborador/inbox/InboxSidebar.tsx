@@ -80,15 +80,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
 
   if (!lead) return null
 
-  const oldEvents = Array.isArray(lead.history_log) ? lead.history_log.map((log: any) => ({
-    gateway_event: log.type,
-    gateway_status: log.type,
-    reason: log.description,
-    created_at: log.created_at,
-    metadata: null
-  })) : []
-  
-  const combinedEvents = [...dbEvents, ...oldEvents].sort((a, b) => {
+  const timelineEvents = [...dbEvents].sort((a, b) => {
     return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
   })
 
@@ -213,6 +205,19 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
       <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#f9fafb] flex flex-col" ref={scrollRef}>
         <div className="p-6 space-y-6 flex-1 w-full max-w-[100vw]">
           
+          {/* ALERTA 360: MOTIVO DE ESTORNO/RECUSA */}
+          {lead.refund_reason && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 shadow-sm">
+              <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-[13px] font-bold text-red-800 mb-1">Motivo do Reembolso/Recusa</h4>
+                <p className="text-[13px] text-red-700 leading-relaxed font-medium">
+                  {lead.refund_reason}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* FASE 2: DADOS DO LEAD E PRODUTO (Sem Sanfona) */}
           <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-4">
             
@@ -295,18 +300,11 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
                 </div>
                 
                 {/* Informações detalhadas de reembolso se existirem */}
-                {(lead.refund_reason || lead.refunded_at) && (
+                {lead.refunded_at && (
                   <div className="pl-8 mt-2 space-y-1">
-                    {lead.refund_reason && (
-                      <p className="text-[13px] font-medium opacity-90">
-                        <strong>Causa:</strong> {lead.refund_reason}
-                      </p>
-                    )}
-                    {lead.refunded_at && (
-                      <p className="text-[11px] opacity-75">
-                        Data do Reembolso: {new Date(lead.refunded_at).toLocaleString('pt-BR')}
-                      </p>
-                    )}
+                    <p className="text-[11px] opacity-75">
+                      Data do Reembolso: {new Date(lead.refunded_at).toLocaleString('pt-BR')}
+                    </p>
                   </div>
                 )}
               </div>
@@ -335,9 +333,16 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
                 )}
 
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-[11px] font-bold text-indigo-900/60 uppercase tracking-wider">
-                    {isVendaAtiva ? 'Script de Vendas Sugerido' : 'Script Sugerido'}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-[11px] font-bold text-indigo-900/60 uppercase tracking-wider">
+                      {isVendaAtiva ? 'Script de Vendas Sugerido' : 'Script Sugerido'}
+                    </h3>
+                    {recommendedScripts[activeScriptIndex].sub_condition && (
+                      <span className="px-2 py-0.5 bg-green-100 text-green-800 text-[10px] font-bold rounded-full border border-green-200" title={`A IA recomendou este script porque o motivo do reembolso contém a palavra "${recommendedScripts[activeScriptIndex].sub_condition}"`}>
+                        🎯 Match de Motivo
+                      </span>
+                    )}
+                  </div>
                   <button onClick={() => handleCopyScript(recommendedScripts[activeScriptIndex].content)} className="flex items-center gap-1.5 px-2 py-1 bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 text-[11px] font-bold rounded transition-colors">
                     <Copy className="w-3 h-3" /> Copiar
                   </button>
@@ -401,7 +406,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
               <div className="text-center py-4 text-gray-500 text-sm">Carregando histórico...</div>
             ) : (
               <div className="relative border-l-2 border-gray-200 ml-3 space-y-5">
-                {combinedEvents.map((log: any, idx: number) => {
+                {timelineEvents.map((log: any, idx: number) => {
                   const type = log.gateway_event || log.gateway_status || ''
                   let Icon = Activity
                   let iconBg = 'bg-gray-100'
