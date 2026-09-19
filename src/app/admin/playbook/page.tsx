@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { scriptService } from '@/services/script.service'
 import type { ActionScript, CreateActionScriptDTO } from '@/types/script.types'
@@ -24,6 +24,7 @@ export default function PlaybookPage() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingScript, setEditingScript] = useState<ActionScript | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   
   // Form State
   const [formData, setFormData] = useState<CreateActionScriptDTO>({
@@ -32,6 +33,26 @@ export default function PlaybookPage() {
     content: '',
     sub_condition: ''
   })
+
+  const insertVariable = (tag: string) => {
+    const textarea = textareaRef.current
+    if (!textarea) {
+      setFormData(f => ({ ...f, content: f.content + tag }))
+      return
+    }
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const content = formData.content
+    const newContent = content.substring(0, start) + tag + content.substring(end)
+    
+    setFormData(f => ({ ...f, content: newContent }))
+    
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(start + tag.length, start + tag.length)
+    }, 0)
+  }
 
   const { data: scripts = [], isLoading } = useQuery({
     queryKey: ['admin_scripts'],
@@ -270,6 +291,7 @@ export default function PlaybookPage() {
                     Corpo da Mensagem (O que o vendedor irá enviar)
                   </label>
                   <textarea 
+                    ref={textareaRef}
                     required
                     value={formData.content}
                     onChange={e => setFormData({...formData, content: e.target.value})}
@@ -297,7 +319,7 @@ export default function PlaybookPage() {
                     <button 
                       key={v.tag}
                       type="button"
-                      onClick={() => setFormData(f => ({ ...f, content: f.content + v.tag }))}
+                      onClick={() => insertVariable(v.tag)}
                       className="w-full text-left p-3 rounded-lg border border-indigo-100 bg-white hover:border-indigo-300 hover:shadow-sm transition-all group"
                     >
                       <span className="block font-bold text-indigo-700 text-sm group-hover:text-indigo-800">{v.tag}</span>

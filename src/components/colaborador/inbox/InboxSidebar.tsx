@@ -94,11 +94,11 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
 
   const parseScriptVariables = (content: string) => {
     let parsed = content
-    parsed = parsed.replace(/{NOME}/g, lead.name?.split(' ')[0] || '')
-    parsed = parsed.replace(/{PRODUTO}/g, lead.product_name || '')
+    parsed = parsed.replace(/{NOME}/g, lead.name?.split(' ')[0] || 'Cliente')
+    parsed = parsed.replace(/{PRODUTO}/g, lead.product_name || 'nosso produto')
     parsed = parsed.replace(/{LINK_CHECKOUT}/g, affiliateLink || '')
     parsed = parsed.replace(/{LINK_VENDAS}/g, salesLink || '')
-    parsed = parsed.replace(/{COLABORADOR}/g, collaboratorName?.split(' ')[0] || '')
+    parsed = parsed.replace(/{COLABORADOR}/g, collaboratorName?.split(' ')[0] || 'Atendente')
     return parsed
   }
 
