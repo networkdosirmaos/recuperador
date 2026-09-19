@@ -93,9 +93,9 @@ export function InboxLeadCard({ lead, isSelected, onClick }: InboxLeadCardProps)
             <span>Retorno {new Date(lead.next_action_at as string).toLocaleString('pt-BR', { timeStyle: 'short', dateStyle: new Date(lead.next_action_at as string).toLocaleDateString() !== new Date().toLocaleDateString() ? 'short' : undefined })}</span>
           </div>
         )}
-        <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
-          <span>Entrou há {getTimeAgo(lead.created_at)}</span>
+        <div className="flex items-center gap-2 text-gray-500">
+          <Clock className="w-4 h-4 flex-shrink-0" />
+          <span>Último evento há {getTimeAgo(lead.gateway_updated_at || lead.updated_at || lead.created_at)}</span>
         </div>
       </div>
 
