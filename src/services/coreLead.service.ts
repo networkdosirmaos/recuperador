@@ -27,7 +27,8 @@ export const coreLeadService = {
 
     // 3. Prepara os dados pro Upsert
     const leadData: any = {
-      gateway_updated_at: payload.updatedAt || new Date().toISOString(),\n      updated_at: new Date().toISOString(),
+      gateway_updated_at: payload.updatedAt || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       gateway_status: payload.gatewayStatus,
       gateway_event: payload.event,
       gateway_metadata: payload.rawPayload,
