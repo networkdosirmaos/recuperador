@@ -262,7 +262,7 @@ export function InboxView({ targetUserId, viewerRole, viewerId }: InboxViewProps
 
       {/* Sidebar Fixo */}
       <div className={`fixed inset-0 z-40 bg-black/20 backdrop-blur-sm transition-opacity md:hidden ${selectedLeadId ? 'opacity-100 visible' : 'opacity-0 invisible'}`} onClick={() => setSelectedLeadId(null)}></div>
-      <div className={`fixed inset-y-0 right-0 z-50 w-full md:w-[450px] transform transition-transform duration-300 ${selectedLeadId ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`fixed inset-y-0 right-0 z-50 w-full md:w-[450px] max-w-[100vw] overflow-x-hidden transform transition-transform duration-300 ${selectedLeadId ? 'translate-x-0' : 'translate-x-full'}`}>
         <InboxSidebar 
           lead={selectedLeadData} 
           onClose={() => setSelectedLeadId(null)} 

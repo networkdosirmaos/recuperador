@@ -183,7 +183,7 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
   }
 
   return (
-    <div className="fixed inset-y-0 right-0 w-full md:w-[450px] bg-white border-l border-gray-200 shadow-2xl flex flex-col z-50 transform transition-transform duration-300 ease-in-out translate-x-0">
+    <div className="h-full w-full bg-white flex flex-col z-50">
       
       {/* FASE 1: HEADER FIXO (Contexto Imediato) */}
       <div className="px-6 py-4 border-b border-gray-100 flex items-start justify-between bg-white shrink-0 z-10">
@@ -210,8 +210,8 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
       </div>
 
       {/* ÁREA DE SCROLL (CONTEÚDO) */}
-      <div className="flex-1 overflow-y-auto bg-[#f9fafb] flex flex-col" ref={scrollRef}>
-        <div className="p-6 space-y-6 flex-1">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#f9fafb] flex flex-col" ref={scrollRef}>
+        <div className="p-6 space-y-6 flex-1 w-full max-w-[100vw]">
           
           {/* FASE 2: DADOS DO LEAD E PRODUTO (Sem Sanfona) */}
           <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-4">
