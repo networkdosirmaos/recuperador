@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { LogOut, Target, User } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { ProfileModal } from '@/components/collaborator/ProfileModal'
+import { PushNotificationToggle } from '@/components/PushNotificationToggle'
 
 export default function ColaboradorLayout({ children }: { children: ReactNode }) {
   const router = useRouter()
@@ -99,6 +100,8 @@ export default function ColaboradorLayout({ children }: { children: ReactNode })
               </span>
             </div>
             <div className="flex items-center gap-1 sm:gap-2">
+              <PushNotificationToggle />
+              <div className="w-px h-6 bg-gray-200 hidden sm:block mx-1"></div>
               <button 
                 onClick={() => setIsProfileModalOpen(true)}
                 className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 text-sm font-semibold text-gray-600 hover:text-indigo-600 transition-colors rounded-md hover:bg-indigo-50"

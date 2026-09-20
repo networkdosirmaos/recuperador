@@ -14,7 +14,8 @@ import {
   Folder,
   Menu,
   X,
-  BookOpen
+  BookOpen,
+  Bell
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -97,6 +98,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       title: 'Sistema',
       items: [
         { name: 'Configurações', href: '/admin/configuracoes', icon: Settings },
+        { name: 'Notificações', href: '/admin/configuracoes/notificacoes', icon: Bell },
       ]
     }
   ]
