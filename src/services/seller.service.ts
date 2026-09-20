@@ -29,6 +29,7 @@ export const sellerService = {
   },
 
   async getMyLeads(userId: string) {
+    // Mantendo temporariamente por retrocompatibilidade se algo quebrar, mas não usaremos mais no InboxView
     const { data, error } = await supabase
       .from('leads')
       .select('id, name, phone, email, product_name, status, temperature, updated_at, gateway, gateway_updated_at, payment_method, gateway_status, reason, gateway_event, created_at, next_action_at, notes, history_log, gateway_metadata, refund_reason')
@@ -37,6 +38,26 @@ export const sellerService = {
       .limit(300)
     if (error) throw error
     return data || []
+  },
+
+  async getLeadsByBucket(userId: string, bucket: string, offset: number = 0, limit: number = 20) {
+    const { data, error } = await supabase.rpc('get_leads_by_bucket', {
+      p_user_id: userId,
+      p_bucket: bucket,
+      p_offset: offset,
+      p_limit: limit
+    })
+    if (error) throw error
+    return data || []
+  },
+
+  async getLeadCounts(userId: string) {
+    const { data, error } = await supabase.rpc('get_lead_counts', {
+      p_user_id: userId
+    })
+    if (error) throw error
+    // Como o RPC retorna json (ex: { "pendentes": 2, "em_andamento": 3 }), tipamos aqui
+    return data as { pendentes: number, em_andamento: number, finalizados: number, geladeira: number }
   },
 
   async pullLeads(userId: string, listId: string) {
