@@ -41,6 +41,7 @@ export function InboxSidebar({
   onSaveNote, 
   affiliateLink, 
   salesLink, 
+  collaboratorName,
   viewerRole = 'collaborator', 
   canSeeEmail = true, 
   onRemoveFromQueue, 
