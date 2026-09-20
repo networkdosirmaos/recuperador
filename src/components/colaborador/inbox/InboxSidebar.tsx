@@ -188,6 +188,9 @@ export function InboxSidebar({
             leadName={lead.name!}
             leadPhone={lead.phone}
             productName={lead.product_name}
+            affiliateLink={affiliateLink}
+            salesLink={salesLink}
+            collaboratorName={collaboratorName}
           />
 
           <LeadManagement 

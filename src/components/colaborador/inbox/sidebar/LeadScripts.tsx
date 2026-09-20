@@ -12,6 +12,9 @@ interface LeadScriptsProps {
   leadName: string;
   leadPhone: string | null | undefined;
   productName: string | null | undefined;
+  affiliateLink?: string;
+  salesLink?: string;
+  collaboratorName?: string;
 }
 
 export function LeadScripts({ 
@@ -23,13 +26,20 @@ export function LeadScripts({
   setActiveScriptIndex,
   leadName,
   leadPhone,
-  productName
+  productName,
+  affiliateLink,
+  salesLink,
+  collaboratorName
 }: LeadScriptsProps) {
 
-  const parseScriptVariables = (text: string) => {
-    return text
-      .replace(/{{nome_cliente}}/g, leadName || 'Cliente')
-      .replace(/{{nome_produto}}/g, productName || 'Produto')
+  const parseScriptVariables = (content: string) => {
+    let parsed = content
+    parsed = parsed.replace(/{NOME}/g, leadName?.split(' ')[0] || 'Cliente')
+    parsed = parsed.replace(/{PRODUTO}/g, productName || 'nosso produto')
+    parsed = parsed.replace(/{LINK_CHECKOUT}/g, affiliateLink || '')
+    parsed = parsed.replace(/{LINK_VENDAS}/g, salesLink || '')
+    parsed = parsed.replace(/{COLABORADOR}/g, collaboratorName?.split(' ')[0] || 'Atendente')
+    return parsed
   }
 
   const handleCopyScript = (content: string) => {
