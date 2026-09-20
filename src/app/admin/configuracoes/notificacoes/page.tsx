@@ -16,8 +16,8 @@ export default async function NotificacoesPage() {
         Configure as mensagens que os vendedores recebem em seus celulares via Push Notification (PWA).
       </p>
 
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 shadow-sm">
-        <div className="mb-6 border-b border-zinc-100 dark:border-zinc-800 pb-4">
+      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+        <div className="mb-6 border-b border-gray-100 pb-4">
           <h2 className="text-lg font-semibold">Gatilho: Novo Lead na Fila</h2>
           <p className="text-sm text-zinc-500">
             Disparado imediatamente quando um novo lead é recebido pelo webhook e designado para um vendedor.

@@ -1,12 +1,11 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
 import { requireAdmin } from './auth.utils'
 import { revalidatePath } from 'next/cache'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function getNotificationTemplate(eventType: string) {
-  const supabase = await createClient()
-  const { data } = await supabase
+  const { data } = await supabaseAdmin
     .from('notification_templates')
     .select('*')
     .eq('event_type', eventType)
@@ -18,9 +17,8 @@ export async function getNotificationTemplate(eventType: string) {
 export async function updateNotificationTemplate(eventType: string, title: string, body: string) {
   try {
     await requireAdmin()
-    const supabase = await createClient()
 
-    const { error } = await supabase.from('notification_templates').upsert({
+    const { error } = await supabaseAdmin.from('notification_templates').upsert({
       event_type: eventType,
       title,
       body,

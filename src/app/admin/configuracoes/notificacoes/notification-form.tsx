@@ -24,35 +24,35 @@ export function NotificationForm({ initialData }: { initialData: any }) {
   return (
     <div className="space-y-5">
       <div>
-        <label className="block text-sm font-medium mb-1.5">Título da Notificação</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Título da Notificação</label>
         <input 
           value={title}
           onChange={e => setTitle(e.target.value)}
-          className="w-full border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 bg-transparent focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+          className="w-full border border-gray-300 rounded-md p-2.5 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
           placeholder="Ex: Novo Lead: {PRODUTO}"
           maxLength={64}
         />
-        <p className="text-xs text-zinc-500 mt-1">Recomendado manter curto (até 50 caracteres).</p>
+        <p className="text-xs text-gray-500 mt-1">Recomendado manter curto (até 50 caracteres).</p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1.5">Corpo da Mensagem</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Corpo da Mensagem</label>
         <textarea 
           value={body}
           onChange={e => setBody(e.target.value)}
-          className="w-full border border-zinc-300 dark:border-zinc-700 rounded-md p-2.5 bg-transparent h-28 focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
+          className="w-full border border-gray-300 rounded-md p-2.5 bg-white text-gray-900 h-28 focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
           placeholder="Ex: O cliente {NOME} gerou um Pix."
           maxLength={150}
         />
       </div>
 
-      <div className="text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 p-4 rounded-md flex flex-col gap-1">
+      <div className="text-sm bg-blue-50 text-blue-800 p-4 rounded-md flex flex-col gap-1">
         <strong>Variáveis Dinâmicas Disponíveis:</strong>
         <p>Use as chaves abaixo para personalizar a mensagem com os dados do lead real:</p>
-        <code className="bg-blue-100 dark:bg-blue-800/50 px-2 py-1 rounded mt-1 inline-block w-fit">
+        <code className="bg-blue-100 px-2 py-1 rounded mt-1 inline-block w-fit text-blue-900">
           {`{NOME}`} - O nome do cliente
         </code>
-        <code className="bg-blue-100 dark:bg-blue-800/50 px-2 py-1 rounded inline-block w-fit">
+        <code className="bg-blue-100 px-2 py-1 rounded inline-block w-fit text-blue-900">
           {`{PRODUTO}`} - O nome do produto comprado/abandonado
         </code>
       </div>
