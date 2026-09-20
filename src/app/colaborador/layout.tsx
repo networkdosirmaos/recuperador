@@ -93,23 +93,23 @@ export default function ColaboradorLayout({ children }: { children: ReactNode })
                 <Target className="w-5 h-5 text-indigo-600" />
               </div>
               <span className="text-base md:text-lg font-bold text-gray-900 flex items-center gap-2 md:gap-3 truncate">
-                <span className="truncate">Recuperador do Papai</span>
+                <span className="truncate hidden sm:inline">Recuperador do Papai</span>
                 <span className="text-gray-300 font-light hidden sm:inline">|</span>
-                <span className="font-normal text-gray-500 hidden sm:inline truncate">Central de Leads</span>
+                <span className="font-normal text-gray-800 sm:text-gray-500 truncate">Central de Leads</span>
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <button 
                 onClick={() => setIsProfileModalOpen(true)}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-600 hover:text-indigo-600 transition-colors rounded-md hover:bg-indigo-50"
+                className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 text-sm font-semibold text-gray-600 hover:text-indigo-600 transition-colors rounded-md hover:bg-indigo-50"
               >
                 <User className="w-4 h-4" />
-                Meu Perfil
+                <span className="hidden sm:inline">Meu Perfil</span>
               </button>
               <div className="w-px h-6 bg-gray-200 hidden sm:block mx-1"></div>
               <button 
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-500 hover:text-gray-800 transition-colors rounded-md hover:bg-gray-50"
+                className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 text-sm font-semibold text-gray-500 hover:text-gray-800 transition-colors rounded-md hover:bg-gray-50"
               >
                 <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Sair</span>
