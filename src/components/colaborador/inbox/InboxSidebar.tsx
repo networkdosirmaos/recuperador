@@ -205,19 +205,6 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
       <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#f9fafb] flex flex-col" ref={scrollRef}>
         <div className="p-6 space-y-6 flex-1 w-full max-w-[100vw]">
           
-          {/* ALERTA 360: MOTIVO DE ESTORNO/RECUSA */}
-          {lead.refund_reason && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 shadow-sm">
-              <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-[13px] font-bold text-red-800 mb-1">Motivo do Reembolso/Recusa</h4>
-                <p className="text-[13px] text-red-700 leading-relaxed font-medium">
-                  {lead.refund_reason}
-                </p>
-              </div>
-            </div>
-          )}
-
           {/* FASE 2: DADOS DO LEAD E PRODUTO (Sem Sanfona) */}
           <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-4">
             
@@ -280,6 +267,19 @@ export function InboxSidebar({ lead, onClose, onUpdateStatus, onScheduleAction, 
               )}
             </div>
           </div>
+
+          {/* ALERTA 360: MOTIVO DE ESTORNO/RECUSA */}
+          {lead.refund_reason && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 shadow-sm">
+              <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-[13px] font-bold text-red-800 mb-1">Motivo do Reembolso/Recusa</h4>
+                <p className="text-[13px] text-red-700 leading-relaxed font-medium">
+                  {lead.refund_reason}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* FASE 3: PROBLEMA E SOLUÇÃO (Evento + Script) */}
           <div>

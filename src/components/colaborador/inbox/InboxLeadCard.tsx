@@ -89,8 +89,11 @@ export function InboxLeadCard({ lead, isSelected, onClick }: InboxLeadCardProps)
       <div className="flex-1 min-w-[150px] text-[13px] text-gray-500 flex flex-col justify-center gap-1.5">
         {lead.next_action_at && (
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
-            <span>Retorno {new Date(lead.next_action_at as string).toLocaleString('pt-BR', { timeStyle: 'short', dateStyle: new Date(lead.next_action_at as string).toLocaleDateString() !== new Date().toLocaleDateString() ? 'short' : undefined })}</span>
+            <Calendar className={`w-4 h-4 flex-shrink-0 ${new Date(lead.next_action_at as string).getTime() <= Date.now() ? 'text-red-500' : 'text-gray-400'}`} />
+            <span className={new Date(lead.next_action_at as string).getTime() <= Date.now() ? 'text-red-600 font-bold' : ''}>
+              {new Date(lead.next_action_at as string).getTime() <= Date.now() && '⚠️ Atrasado: '}
+              Retorno {new Date(lead.next_action_at as string).toLocaleString('pt-BR', { timeStyle: 'short', dateStyle: new Date(lead.next_action_at as string).toLocaleDateString() !== new Date().toLocaleDateString() ? 'short' : undefined })}
+            </span>
           </div>
         )}
         <div className="flex items-center gap-2 text-gray-500">
