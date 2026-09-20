@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { AlertCircle, ChevronDown, RefreshCw, Check, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import { sellerService } from '@/services/seller.service'
 import { adminService } from '@/services/admin.service'
 import { useLeadsRealtime } from '@/hooks/useLeadsRealtime'
@@ -56,7 +56,7 @@ export function InboxView({ targetUserId, viewerRole, viewerId }: InboxViewProps
   } = useInfiniteQuery({
     queryKey: ['seller_leads_paginated', targetUserId, selectedTab],
     queryFn: ({ pageParam = 0 }) => sellerService.getLeadsByBucket(targetUserId, selectedTab, pageParam as number, 20),
-    getNextPageParam: (lastPage, allPages) => lastPage.length === 20 ? allPages.length * 20 : undefined,
+    getNextPageParam: (lastPage: MyLead[], allPages: MyLead[][]) => lastPage.length === 20 ? allPages.length * 20 : undefined,
     initialPageParam: 0,
     enabled: !!targetUserId
   })
@@ -81,7 +81,7 @@ export function InboxView({ targetUserId, viewerRole, viewerId }: InboxViewProps
 
   const filteredLeads = useMemo(() => {
     if (!pagesData) return []
-    return pagesData.pages.flatMap(page => page)
+    return pagesData.pages.flatMap((page: any) => page)
   }, [pagesData])
 
   const { groupedLeads } = useLeadBuckets(filteredLeads)
@@ -207,12 +207,14 @@ export function InboxView({ targetUserId, viewerRole, viewerId }: InboxViewProps
         </div>
       ) : null}
 
-      {counts.coolingDown > 0 && (
-        <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-xl flex items-center gap-3 animate-pulse">
-          <span className="text-xl">⏳</span>
+      {(counts.geladeira || 0) > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center gap-3 text-blue-800 mb-6 shadow-sm">
+          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <span className="text-lg">❄️</span>
+          </div>
           <div>
-            <p className="font-bold text-sm">{viewerRole === 'admin' ? `Este vendedor tem ${counts.coolingDown} lead(s)` : `Você tem ${counts.coolingDown} lead(s)`} aguardando pagamento de Pix.</p>
-            <p className="text-xs opacity-90 mt-0.5">Eles aparecerão na fila automaticamente caso o prazo expire sem pagamento.</p>
+            <p className="font-bold text-sm">{viewerRole === 'admin' ? `Este vendedor tem ${counts.geladeira} lead(s)` : `Você tem ${counts.geladeira} lead(s)`} aguardando pagamento de Pix.</p>
+            <p className="text-xs text-blue-600 mt-0.5">Eles aparecerão na fila de pendentes em 6 horas se o pagamento não cair.</p>
           </div>
         </div>
       )}

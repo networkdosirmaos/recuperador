@@ -1,7 +1,6 @@
-import { MyLead } from '@/components/colaborador/MyLeadsTable'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { sellerService } from '@/services/seller.service'
-import { adminService } from '@/services/admin.service'
+import { returnSingleLeadToPoolSecure, deleteLeadsSecure } from '@/app/actions/admin.actions'
 import toast from 'react-hot-toast'
 
 export function useLeadMutations(targetUserId: string, viewerId: string, onSelectNull: () => void) {
@@ -50,7 +49,7 @@ export function useLeadMutations(targetUserId: string, viewerId: string, onSelec
       if (viewerId === targetUserId) {
         throw new Error('Você não pode remover leads da sua própria fila.')
       }
-      await adminService.removeLeadFromQueue(leadId)
+      await returnSingleLeadToPoolSecure(leadId)
     },
     onSuccess: () => {
       onSelectNull()
@@ -65,7 +64,7 @@ export function useLeadMutations(targetUserId: string, viewerId: string, onSelec
       if (viewerId === targetUserId) {
         throw new Error('Você não pode excluir leads.')
       }
-      await adminService.deleteLead(leadId)
+      await deleteLeadsSecure([leadId])
     },
     onSuccess: () => {
       onSelectNull()
