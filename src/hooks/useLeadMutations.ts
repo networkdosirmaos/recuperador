@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { sellerService } from '@/services/seller.service'
 import { returnSingleLeadToPoolSecure, deleteLeadsSecure } from '@/app/actions/admin.actions'
+import { updateLeadStatusSecure, updateNextActionSecure, appendLeadHistorySecure } from '@/app/actions/lead.actions'
 import toast from 'react-hot-toast'
 
 export function useLeadMutations(targetUserId: string, viewerId: string, onSelectNull: () => void) {
@@ -13,7 +13,7 @@ export function useLeadMutations(targetUserId: string, viewerId: string, onSelec
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ leadId, newStatus }: { leadId: string, newStatus: string }) => {
-      await sellerService.updateLeadStatus(leadId, newStatus)
+      await updateLeadStatusSecure(leadId, newStatus, viewerId)
     },
     onSuccess: () => {
       invalidateLeads()
@@ -24,7 +24,7 @@ export function useLeadMutations(targetUserId: string, viewerId: string, onSelec
 
   const updateScheduleMutation = useMutation({
     mutationFn: async ({ leadId, nextActionAt }: { leadId: string, nextActionAt: string | null }) => {
-      await sellerService.updateNextAction(leadId, nextActionAt)
+      await updateNextActionSecure(leadId, nextActionAt, viewerId)
     },
     onSuccess: () => {
       invalidateLeads()
@@ -35,10 +35,12 @@ export function useLeadMutations(targetUserId: string, viewerId: string, onSelec
 
   const addNoteMutation = useMutation({
     mutationFn: async ({ leadId, text }: { leadId: string, text: string }) => {
-      await sellerService.updateNote(leadId, text)
+      await appendLeadHistorySecure(leadId, viewerId, text)
     },
     onSuccess: () => {
       invalidateLeads()
+      // Opcional: invalidar também os eventos específicos do lead se usássemos no painel
+      queryClient.invalidateQueries({ queryKey: ['lead_events', targetUserId] })
       toast.success('Anotação salva')
     },
     onError: () => toast.error('Erro ao salvar anotação')

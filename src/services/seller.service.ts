@@ -69,37 +69,5 @@ export const sellerService = {
     })
     if (error) throw error
     return count
-  },
-
-  async updateLeadStatus(leadId: string, newStatus: string) {
-    const { error } = await supabase
-      .from('leads')
-      .update({ status: newStatus, updated_at: new Date().toISOString() })
-      .eq('id', leadId)
-    if (error) throw error
-  },
-
-  async updateNextAction(leadId: string, nextActionAt: string | null) {
-    const { error } = await supabase
-      .from('leads')
-      .update({ next_action_at: nextActionAt, updated_at: new Date().toISOString() })
-      .eq('id', leadId)
-    if (error) throw error
-  },
-
-  async updateNote(leadId: string, notes: string) {
-    const { error } = await supabase
-      .from('leads')
-      .update({ notes, updated_at: new Date().toISOString() })
-      .eq('id', leadId)
-    if (error) throw error
-  },
-
-  async updateHistoryLog(leadId: string, historyLog: any[]) {
-    const { error } = await supabase
-      .from('leads')
-      .update({ history_log: historyLog, updated_at: new Date().toISOString() })
-      .eq('id', leadId)
-    if (error) throw error
   }
 }
