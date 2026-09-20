@@ -60,7 +60,10 @@ export function InboxSidebar({
   const { data: recommendedScripts = [] } = useQuery({
     queryKey: ['recommended_scripts', lead?.id, lead?.gateway_status, lead?.gateway_event, isVendaAtiva],
     queryFn: () => {
-      let types = [lead?.gateway_status, lead?.gateway_event].filter(Boolean) as string[];
+      // Priorizamos o gateway_event. Se não existir, caímos para o gateway_status.
+      // Isso evita que um checkout_abandoned que também tenha status "pending"
+      // puxe scripts de PIX.
+      let types = [lead?.gateway_event || lead?.gateway_status].filter(Boolean) as string[];
       if (types.length === 0 || isVendaAtiva) {
         types = ['venda_ativa'];
       }
