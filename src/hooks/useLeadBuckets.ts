@@ -31,6 +31,10 @@ export function useLeadBuckets(myLeads: MyLead[], selectedTab: 'pendentes' | 'em
       if (isOrganic(l)) return 'ignorar'
       if (isApproved(l) || isLost(l)) return 'finalizados'
       if (isCoolingDown(l)) return 'geladeira'
+      
+      // SOLUÇÃO A: Status Soberano
+      if (l.status === 'em_atendimento') return 'em_andamento'
+      
       if (l.status === 'novo' || isPastDue(l)) return 'pendentes'
       return 'em_andamento'
     }
