@@ -1,0 +1,17 @@
+{
+  "name": "Recuperador de Vendas",
+  "short_name": "Recuperador",
+  "description": "CRM e Recuperador de Vendas via WhatsApp",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

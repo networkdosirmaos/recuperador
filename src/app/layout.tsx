@@ -15,6 +15,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Recuperador do Papai",
   description: "Sistema de Recuperação de Vendas",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Recuperador",
+  },
 };
 
 export const viewport: Viewport = {
@@ -22,6 +28,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: "#2563eb",
 };
 
 import { Providers } from "@/providers/query-provider";
