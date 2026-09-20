@@ -28,36 +28,16 @@ interface InboxViewProps {
 export function InboxView({ targetUserId, viewerRole, viewerId }: InboxViewProps) {
   const queryClient = useQueryClient()
   
+  // Queries for target user (the seller whose leads we are viewing)
   const { data: profile } = useQuery({
     queryKey: ['seller_profile', targetUserId],
     queryFn: () => sellerService.getProfile(targetUserId),
     enabled: !!targetUserId
   })
 
-  const [selectedTab, setSelectedTab] = useState<'pendentes' | 'em_andamento' | 'finalizados'>('pendentes')
-
-  const { data: countsData, isLoading: loadingCounts } = useQuery({
-    queryKey: ['seller_lead_counts', targetUserId],
-    queryFn: () => sellerService.getLeadCounts(targetUserId),
-    enabled: !!targetUserId,
-    refetchInterval: 30000 // Apenas os contadores atualizam levemente a cada 30s
-  })
-
-  const counts = countsData || { pendentes: 0, em_andamento: 0, finalizados: 0, geladeira: 0, todos_ativos: 0 }
-
-  const {
-    data: pagesData,
-    isLoading: loadingLeads,
-    isFetching,
-    refetch,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage
-  } = useInfiniteQuery({
-    queryKey: ['seller_leads_paginated', targetUserId, selectedTab],
-    queryFn: ({ pageParam = 0 }) => sellerService.getLeadsByBucket(targetUserId, selectedTab, pageParam as number, 20),
-    getNextPageParam: (lastPage, allPages) => lastPage.length === 20 ? allPages.length * 20 : undefined,
-    initialPageParam: 0,
+  const { data: myLeads = [], isLoading: loadingLeads, isFetching, refetch } = useQuery({
+    queryKey: ['seller_leads', targetUserId],
+    queryFn: () => sellerService.getMyLeads(targetUserId),
     enabled: !!targetUserId
   })
 
@@ -66,28 +46,25 @@ export function InboxView({ targetUserId, viewerRole, viewerId }: InboxViewProps
   const loading = loadingLeads
   const isActive = profile?.is_active !== false
 
+  // UI States
+  const [selectedTab, setSelectedTab] = useState<'pendentes' | 'em_andamento' | 'finalizados'>('pendentes')
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
   const [showRefreshSuccess, setShowRefreshSuccess] = useState(false)
 
   const handleRefresh = async () => {
     await refetch()
-    queryClient.invalidateQueries({ queryKey: ['seller_lead_counts', targetUserId] })
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      navigator.vibrate(50) 
+      navigator.vibrate(50) // Micro-vibração sutil
     }
     setShowRefreshSuccess(true)
     setTimeout(() => setShowRefreshSuccess(false), 2000)
   }
 
-  const filteredLeads = useMemo(() => {
-    if (!pagesData) return []
-    return pagesData.pages.flatMap(page => page)
-  }, [pagesData])
-
-  const { groupedLeads } = useLeadBuckets(filteredLeads)
+  // Lógica de Negócio Modularizada
+  const { filteredLeads, groupedLeads, counts } = useLeadBuckets(myLeads, selectedTab)
 
   // Motor de Gamificação
-  const { isAnimating } = useLeadGamification(counts.pendentes || 0, counts.finalizados || 0)
+  const { isAnimating } = useLeadGamification(counts.pendentes, counts.finalizados)
 
   // Custom hook de Mutações
   const {
@@ -118,7 +95,7 @@ export function InboxView({ targetUserId, viewerRole, viewerId }: InboxViewProps
     )
   }
 
-  const selectedLeadData = filteredLeads.find((l: MyLead) => l.id === selectedLeadId) || null
+  const selectedLeadData = myLeads.find((l: MyLead) => l.id === selectedLeadId) || null
 
   // Virtualization Data Prep
   const groupNames: string[] = []

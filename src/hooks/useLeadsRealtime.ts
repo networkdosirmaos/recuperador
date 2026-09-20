@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { MyLead } from '@/components/colaborador/MyLeadsTable'
 
 export function useLeadsRealtime(userId: string | undefined) {
   const queryClient = useQueryClient()
@@ -14,53 +13,17 @@ export function useLeadsRealtime(userId: string | undefined) {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*', // Escuta INSERT, UPDATE e DELETE
           schema: 'public',
           table: 'leads',
           filter: `current_assignee_id=eq.${userId}`
         },
         (payload) => {
-          console.log('NOVO LEAD!', payload.new)
-          const novoLead = payload.new as MyLead
+          console.log('Realtime Event:', payload.eventType, payload)
           
-          queryClient.setQueryData(['seller_leads', userId], (oldData: MyLead[] | undefined) => {
-            if (!oldData) return [novoLead]
-            if (oldData.find(l => l.id === novoLead.id)) return oldData
-            return [novoLead, ...oldData]
-          })
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'leads'
-        },
-        (payload) => {
-          console.log('LEAD DELETADO EM CASCATA!', payload.old)
-          queryClient.setQueryData(['seller_leads', userId], (oldData: MyLead[] | undefined) => {
-            if (!oldData) return []
-            return oldData.filter(l => l.id !== payload.old.id)
-          })
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'leads',
-          filter: `current_assignee_id=eq.${userId}`
-        },
-        (payload) => {
-          console.log('LEAD ATUALIZADO!', payload.new)
-          const atualizadoLead = payload.new as MyLead
-          
-          queryClient.setQueryData(['seller_leads', userId], (oldData: MyLead[] | undefined) => {
-            if (!oldData) return []
-            return oldData.map(l => l.id === atualizadoLead.id ? { ...l, ...atualizadoLead } : l)
-          })
+          // Invalida as queries de contagem e da fila paginada para refetch automático suave
+          queryClient.invalidateQueries({ queryKey: ['seller_leads_paginated', userId] })
+          queryClient.invalidateQueries({ queryKey: ['seller_lead_counts', userId] })
         }
       )
       .subscribe()

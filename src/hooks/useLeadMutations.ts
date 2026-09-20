@@ -1,95 +1,78 @@
 import { MyLead } from '@/components/colaborador/MyLeadsTable'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { sellerService } from '@/services/seller.service'
+import { adminService } from '@/services/admin.service'
 import toast from 'react-hot-toast'
-import { updateLeadStatusSecure, appendLeadHistorySecure, updateNextActionSecure } from '@/app/actions/lead.actions'
-import { returnSingleLeadToPoolSecure, deleteLeadsSecure } from '@/app/actions/admin.actions'
 
-export function useLeadMutations(targetUserId: string, viewerId: string, onClearSelection?: () => void) {
+export function useLeadMutations(targetUserId: string, viewerId: string, onSelectNull: () => void) {
   const queryClient = useQueryClient()
 
+  const invalidateLeads = () => {
+    queryClient.invalidateQueries({ queryKey: ['seller_leads_paginated', targetUserId] })
+    queryClient.invalidateQueries({ queryKey: ['seller_lead_counts', targetUserId] })
+  }
+
   const updateStatusMutation = useMutation({
-    mutationFn: ({ leadId, newStatus }: { leadId: string, newStatus: string }) => 
-      updateLeadStatusSecure(leadId, newStatus, viewerId),
-    onMutate: async ({ leadId, newStatus }) => {
-      await queryClient.cancelQueries({ queryKey: ['seller_leads', targetUserId] })
-      const previousLeads = queryClient.getQueryData(['seller_leads', targetUserId])
-      queryClient.setQueryData(['seller_leads', targetUserId], (old: MyLead[]) => 
-        old?.map((l: MyLead) => l.id === leadId ? { ...l, status: newStatus } : l)
-      )
-      return { previousLeads }
+    mutationFn: async ({ leadId, newStatus }: { leadId: string, newStatus: string }) => {
+      await sellerService.updateLeadStatus(leadId, newStatus)
     },
-    onSuccess: (_, { leadId, newStatus }) => {
-      if (newStatus === 'recuperado' || newStatus === 'perdido') {
-        setTimeout(() => {
-          queryClient.setQueryData(['seller_leads', targetUserId], (old: MyLead[]) => 
-            old?.filter((l: MyLead) => l.id !== leadId)
-          )
-          if (onClearSelection) onClearSelection()
-        }, 1500)
-      }
+    onSuccess: () => {
+      invalidateLeads()
+      toast.success('Status atualizado')
     },
-    onError: (err, variables, context) => {
-      toast.error('Falha ao atualizar o status.')
-      if (context?.previousLeads) {
-        queryClient.setQueryData(['seller_leads', targetUserId], context.previousLeads)
-      }
-    }
+    onError: () => toast.error('Erro ao atualizar status')
   })
 
   const updateScheduleMutation = useMutation({
-    mutationFn: ({ leadId, nextActionAt }: { leadId: string, nextActionAt: string | null }) => 
-      updateNextActionSecure(leadId, nextActionAt, viewerId),
-    onMutate: async ({ leadId, nextActionAt }) => {
-      await queryClient.cancelQueries({ queryKey: ['seller_leads', targetUserId] })
-      const previousLeads = queryClient.getQueryData(['seller_leads', targetUserId])
-      queryClient.setQueryData(['seller_leads', targetUserId], (old: MyLead[]) => 
-        old?.map((l: MyLead) => l.id === leadId ? { ...l, next_action_at: nextActionAt } : l)
-      )
-      return { previousLeads }
+    mutationFn: async ({ leadId, nextActionAt }: { leadId: string, nextActionAt: string | null }) => {
+      await sellerService.updateNextAction(leadId, nextActionAt)
     },
-    onError: (err, variables, context) => {
-      toast.error('Falha ao atualizar o agendamento.')
-      if (context?.previousLeads) {
-        queryClient.setQueryData(['seller_leads', targetUserId], context.previousLeads)
-      }
-    }
+    onSuccess: () => {
+      invalidateLeads()
+      toast.success('Retorno agendado')
+    },
+    onError: () => toast.error('Erro ao agendar retorno')
   })
 
   const addNoteMutation = useMutation({
-    mutationFn: ({ leadId, text }: { leadId: string, text: string }) => 
-      appendLeadHistorySecure(leadId, viewerId, text),
-    onSuccess: (_, { leadId }) => {
-      queryClient.invalidateQueries({ queryKey: ['lead_events', leadId] })
-      // Sem toast automático aqui, o InboxSidebar já dispara um
+    mutationFn: async ({ leadId, text }: { leadId: string, text: string }) => {
+      await sellerService.updateNote(leadId, text)
     },
-    onError: () => {
-      toast.error('Falha ao salvar anotação.')
-    }
+    onSuccess: () => {
+      invalidateLeads()
+      toast.success('Anotação salva')
+    },
+    onError: () => toast.error('Erro ao salvar anotação')
   })
 
-  // === ADMIN MUTATIONS ===
   const removeFromQueueMutation = useMutation({
-    mutationFn: (leadId: string) => returnSingleLeadToPoolSecure(leadId),
-    onSuccess: (_, leadId) => {
-      queryClient.setQueryData(['seller_leads', targetUserId], (old: MyLead[]) => 
-        old?.filter((l: MyLead) => l.id !== leadId)
-      )
-      if (onClearSelection) onClearSelection()
-      toast.success('Lead devolvido para a base geral!')
+    mutationFn: async (leadId: string) => {
+      if (viewerId === targetUserId) {
+        throw new Error('Você não pode remover leads da sua própria fila.')
+      }
+      await adminService.removeLeadFromQueue(leadId)
     },
-    onError: () => toast.error('Falha ao remover lead da fila.')
+    onSuccess: () => {
+      onSelectNull()
+      invalidateLeads()
+      toast.success('Lead removido da fila')
+    },
+    onError: () => toast.error('Erro ao remover lead')
   })
 
   const deleteLeadMutation = useMutation({
-    mutationFn: (leadId: string) => deleteLeadsSecure([leadId]),
-    onSuccess: (_, leadId) => {
-      queryClient.setQueryData(['seller_leads', targetUserId], (old: MyLead[]) => 
-        old?.filter((l: MyLead) => l.id !== leadId)
-      )
-      if (onClearSelection) onClearSelection()
-      toast.success('Lead excluído permanentemente!')
+    mutationFn: async (leadId: string) => {
+      if (viewerId === targetUserId) {
+        throw new Error('Você não pode excluir leads.')
+      }
+      await adminService.deleteLead(leadId)
     },
-    onError: () => toast.error('Falha ao excluir lead.')
+    onSuccess: () => {
+      onSelectNull()
+      invalidateLeads()
+      toast.success('Lead excluído permanentemente')
+    },
+    onError: (err: any) => toast.error(err.message || 'Erro ao excluir lead')
   })
 
   return {
