@@ -2,12 +2,22 @@
 
 import { ReactNode, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { LogOut, Target } from 'lucide-react'
+import { LogOut, Target, User } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { ProfileModal } from '@/components/collaborator/ProfileModal'
 
 export default function ColaboradorLayout({ children }: { children: ReactNode }) {
   const router = useRouter()
   const [isAuthorized, setIsAuthorized] = useState(false)
+  
+  // Profile State
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+  const [userId, setUserId] = useState('')
+  const [profileData, setProfileData] = useState({
+    full_name: '',
+    affiliate_link: '',
+    sales_link: ''
+  })
 
   useEffect(() => {
     async function checkRole() {
@@ -18,7 +28,13 @@ export default function ColaboradorLayout({ children }: { children: ReactNode })
           return
         }
         
-        const { data, error } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+        setUserId(user.id)
+
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('role, full_name, affiliate_link, sales_link')
+          .eq('id', user.id)
+          .single()
         
         if (error || !data) {
           router.push('/login')
@@ -30,6 +46,11 @@ export default function ColaboradorLayout({ children }: { children: ReactNode })
         } else if (data.role !== 'collaborator') {
           router.push('/login')
         } else {
+          setProfileData({
+            full_name: data.full_name || '',
+            affiliate_link: data.affiliate_link || '',
+            sales_link: data.sales_link || ''
+          })
           setIsAuthorized(true)
         }
       } catch (err) {
@@ -43,6 +64,14 @@ export default function ColaboradorLayout({ children }: { children: ReactNode })
   const handleLogout = async () => {
     await supabase.auth.signOut()
     window.location.href = '/login'
+  }
+
+  const handleSaveProfile = (newName: string, newAffiliate: string, newSales: string) => {
+    setProfileData({
+      full_name: newName,
+      affiliate_link: newAffiliate,
+      sales_link: newSales
+    })
   }
 
   if (!isAuthorized) {
@@ -69,13 +98,21 @@ export default function ColaboradorLayout({ children }: { children: ReactNode })
                 <span className="font-normal text-gray-500 hidden sm:inline truncate">Central de Leads</span>
               </span>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setIsProfileModalOpen(true)}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-600 hover:text-indigo-600 transition-colors rounded-md hover:bg-indigo-50"
+              >
+                <User className="w-4 h-4" />
+                Meu Perfil
+              </button>
+              <div className="w-px h-6 bg-gray-200 hidden sm:block mx-1"></div>
               <button 
                 onClick={handleLogout}
                 className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-500 hover:text-gray-800 transition-colors rounded-md hover:bg-gray-50"
               >
                 <LogOut className="w-4 h-4" />
-                Sair
+                <span className="hidden sm:inline">Sair</span>
               </button>
             </div>
           </div>
@@ -86,6 +123,17 @@ export default function ColaboradorLayout({ children }: { children: ReactNode })
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
+
+      {/* Profile Modal */}
+      <ProfileModal 
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        userId={userId}
+        currentName={profileData.full_name}
+        currentAffiliateLink={profileData.affiliate_link}
+        currentSalesLink={profileData.sales_link}
+        onSave={handleSaveProfile}
+      />
     </div>
   )
 }

@@ -96,9 +96,12 @@ export async function returnSingleLeadToPoolSecure(leadId: string) {
   return true
 }
 
-export async function updateAffiliateLinkSecure(id: string, link: string | null, salesLink?: string | null) {
+export async function updateCollaboratorProfileSecure(id: string, fullName: string | null, link: string | null, salesLink?: string | null) {
   await requireAdmin()
-  const updateData: any = { affiliate_link: link }
+  const updateData: any = { 
+    full_name: fullName,
+    affiliate_link: link 
+  }
   if (salesLink !== undefined) {
     updateData.sales_link = salesLink
   }

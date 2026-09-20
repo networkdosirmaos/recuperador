@@ -1,4 +1,4 @@
-import { PauseCircle, PlayCircle, RefreshCw, Link2, Eye, EyeOff } from 'lucide-react'
+import { PauseCircle, PlayCircle, RefreshCw, Edit, Eye, EyeOff, Link2 } from 'lucide-react'
 import Link from 'next/link'
 
 export type TeamMemberStat = {
@@ -88,8 +88,8 @@ export function TeamList({ members, onToggleStatus, onReturnLeads, onEditLink, o
                           onClick={() => onEditLink(member)}
                           className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 transition-colors shadow-sm whitespace-nowrap"
                         >
-                          <Link2 className="w-3.5 h-3.5" />
-                          Link
+                          <Edit className="w-3.5 h-3.5" />
+                          Editar
                         </button>
                       )}
                       {member.in_progress > 0 && (

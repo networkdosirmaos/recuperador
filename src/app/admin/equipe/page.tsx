@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { adminService } from '@/services/admin.service'
-import { toggleCollaboratorStatusSecure, returnCollaboratorLeadsSecure, toggleEmailVisibilitySecure, updateAffiliateLinkSecure } from '@/app/actions/admin.actions'
+import { toggleCollaboratorStatusSecure, returnCollaboratorLeadsSecure, toggleEmailVisibilitySecure, updateCollaboratorProfileSecure } from '@/app/actions/admin.actions'
 import { TeamList, TeamMemberStat } from '@/components/admin/TeamList'
 
 export default function EquipeDashboard() {
@@ -60,12 +60,14 @@ export default function EquipeDashboard() {
   }
 
   const [editingLinkMember, setEditingLinkMember] = useState<TeamMemberStat | null>(null)
+  const [nameInput, setNameInput] = useState('')
   const [linkInput, setLinkInput] = useState('')
   const [salesLinkInput, setSalesLinkInput] = useState('')
   const [isSavingLink, setIsSavingLink] = useState(false)
 
   const handleEditLinkClick = (member: TeamMemberStat) => {
     setEditingLinkMember(member)
+    setNameInput(member.name === 'Vendedor' ? '' : member.name)
     setLinkInput(member.affiliate_link || '')
     setSalesLinkInput(member.sales_link || '')
   }
@@ -74,16 +76,18 @@ export default function EquipeDashboard() {
     if (!editingLinkMember) return
     setIsSavingLink(true)
     try {
-      await updateAffiliateLinkSecure(editingLinkMember.id, linkInput.trim() || null, salesLinkInput.trim() || null)
+      const finalName = nameInput.trim() || null;
+      await updateCollaboratorProfileSecure(editingLinkMember.id, finalName, linkInput.trim() || null, salesLinkInput.trim() || null)
       setTeam(prev => prev.map(m => m.id === editingLinkMember.id ? { 
         ...m, 
+        name: finalName || 'Vendedor',
         affiliate_link: linkInput.trim() || undefined,
         sales_link: salesLinkInput.trim() || undefined 
       } : m))
       setEditingLinkMember(null)
     } catch (error) {
-      console.error('Erro ao salvar link:', error)
-      alert('Não foi possível salvar os links.')
+      console.error('Erro ao salvar perfil:', error)
+      alert('Não foi possível salvar o perfil.')
     } finally {
       setIsSavingLink(false)
     }
@@ -112,12 +116,12 @@ export default function EquipeDashboard() {
         onToggleEmail={handleToggleEmail}
       />
 
-      {/* Modal Edição de Link */}
+      {/* Modal Edição de Perfil */}
       {editingLinkMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-              <h3 className="text-lg font-semibold text-gray-900">Links de Afiliado</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Editar Perfil do Colaborador</h3>
               <button 
                 onClick={() => setEditingLinkMember(null)}
                 className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 transition-colors"
@@ -127,9 +131,19 @@ export default function EquipeDashboard() {
             </div>
             <div className="p-6 space-y-4">
               <p className="text-sm text-gray-600">
-                Defina os links para o vendedor <strong>{editingLinkMember.name}</strong>. Ele poderá copiar estes links diretamente da gaveta de leads.
+                Defina os dados para o colaborador <strong>{editingLinkMember.name}</strong>.
               </p>
               <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">👤 Nome de Exibição (1º Nome)</label>
+                  <input 
+                    type="text"
+                    placeholder="Ex: Leandro"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-800 placeholder-gray-400 bg-white"
+                    value={nameInput}
+                    onChange={(e) => setNameInput(e.target.value)}
+                  />
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">🔗 URL do Checkout</label>
                   <input 
